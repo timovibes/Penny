@@ -11,6 +11,7 @@ import com.example.penny.ui.screens.PrivacyPolicyScreen
 import com.example.penny.ui.screens.SignInScreen
 import com.example.penny.ui.screens.SignUpScreen
 import com.example.penny.ui.screens.TermsOfServiceScreen
+import com.example.penny.viewmodel.HomeViewModel
 import com.example.penny.viewmodel.SignInViewModel
 import com.example.penny.viewmodel.SignUpViewModel
 
@@ -69,7 +70,8 @@ fun AppNavGraph(navController: NavHostController) {
         }
 
         composable("home") {
-            HomeScreen()
+            val viewModel: HomeViewModel = viewModel()
+            HomeScreen(viewModel = viewModel)
         }
 
     }
