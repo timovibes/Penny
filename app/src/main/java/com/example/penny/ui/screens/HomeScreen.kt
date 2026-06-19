@@ -35,12 +35,14 @@ import java.time.format.DateTimeFormatter
 
 private val IncomeGreen = Color(0xFF4CAF82) //just for income
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
     val state by viewModel.uiState.collectAsState()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val colors = MaterialTheme.colorScheme
+    var showAddSheet by remember { mutableStateOf(false) }
 
 
     Box(
@@ -77,7 +79,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
         }
 
         FloatingActionButton(
-            onClick = { /* TODO: Add transaction screen */ },
+            onClick = { showAddSheet = true },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(24.dp),
@@ -98,7 +100,11 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                     date = state.selectedDate!!,
                     transactions = state.selectedDayTransactions
                 )
+
             }
+        }
+        if (showAddSheet) {
+            AddTransactionSheet(onDismiss = { showAddSheet = false })
         }
     }
 }
