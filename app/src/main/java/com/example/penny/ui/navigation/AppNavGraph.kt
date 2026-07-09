@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.penny.ui.screens.HomeScreen
 import com.example.penny.ui.screens.PrivacyPolicyScreen
+import com.example.penny.ui.screens.ProfileScreen
 import com.example.penny.ui.screens.SignInScreen
 import com.example.penny.ui.screens.SignUpScreen
 import com.example.penny.ui.screens.TermsOfServiceScreen
@@ -71,7 +72,20 @@ fun AppNavGraph(navController: NavHostController) {
 
         composable("home") {
             val viewModel: HomeViewModel = viewModel()
-            HomeScreen(viewModel = viewModel)
+            HomeScreen(
+                viewModel = viewModel,
+                onProfileClick = {
+                    navController.navigate("profile")
+                }
+            )
+        }
+
+        composable("profile") {
+            ProfileScreen(
+                onBackClick = { navController.popBackStack() }
+                // other lambdas (onLogoutClick, onPersonalInfoClick, etc.) can stay
+                // as no-op defaults for now until you wire that logic in later
+            )
         }
 
     }
