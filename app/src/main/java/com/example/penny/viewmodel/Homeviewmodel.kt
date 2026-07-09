@@ -24,6 +24,7 @@ data class HomeUiState(
     val selectedDayTransactions: List<Transaction> = emptyList(),
     val monthlyIncome: Double = 0.0,
     val monthlyExpenses: Double = 0.0,
+    val totalBalance: Double = 0.0,
     val isLoading: Boolean = true,
     val error: String? = null
 )
@@ -39,6 +40,24 @@ class HomeViewModel(
 
     init {
         observeCurrentMonth()
+        observeTotalBalance()
+    }
+
+    private fun observeTotalBalance() {
+        viewModelScope.launch {
+            repository.observeAllTransactions()
+                .catch { /* keep last known balance on error; don't crash UI */ }
+                .collect { transactions ->
+                    val balance = transactions
+                        .filter { it.type == "income" }
+                        .sumOf { it.amount } -
+                            transactions
+                                .filter { it.type == "expense" }
+                                .sumOf { it.amount }
+
+                    _uiState.update { it.copy(totalBalance = balance) }
+                }
+        }
     }
 
     fun goToPreviousMonth() {

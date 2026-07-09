@@ -40,7 +40,7 @@ private val IncomeGreen = Color(0xFF4CAF82) //just for income
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = viewModel(),
-    totalBalance : Double = 0.0, // <- new, will come from state once ViewModel is wired
+//    totalBalance : Double = 0.0, // <- new, will come from state once ViewModel is wired
     onProfileClick : () -> Unit = {} // <- new, wire to navigation later
     ) {
     val state by viewModel.uiState.collectAsState()
@@ -61,7 +61,7 @@ fun HomeScreen(
         ) {
 
             TopBar(
-                totalBalance = totalBalance,
+                totalBalance = state.totalBalance,
                 onProfileClick = onProfileClick
             )
 

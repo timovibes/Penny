@@ -73,6 +73,20 @@ class TransactionRepository {
         awaitClose { listener.remove() }
     }
 
+    // Real-time listener for ALL transactions — used to compute total balance across all time
+    fun observeAllTransactions(): Flow<List<Transaction>> = callbackFlow {
+        val listener = transactionsCollection()
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) { close(error); return@addSnapshotListener }
+                val transactions = snapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(Transaction::class.java)?.copy(id = doc.id)
+                } ?: emptyList()
+                trySend(transactions)
+            }
+
+        awaitClose { listener.remove() }
+    }
+
     suspend fun deleteTransaction(transactionId: String) {
         transactionsCollection()
             .document(transactionId)
