@@ -19,6 +19,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import android.widget.Toast
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 
 // ── Data passed in — swap defaults for real data once wired to a ViewModel ────
 data class ProfileUiState(
@@ -54,6 +58,8 @@ fun ProfileScreen(
     versionLabel: String = "Version 2.4.1 (8291)"
 ) {
     val colors = MaterialTheme.colorScheme
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
 
     Column(
         modifier = Modifier
@@ -110,7 +116,11 @@ fun ProfileScreen(
                         .size(28.dp)
                         .clip(CircleShape)
                         .background(colors.onBackground)
-                        .clickable(onClick = onEditAvatarClick),
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            Toast.makeText(context, "Coming soon", Toast.LENGTH_LONG).show()
+                            onEditAvatarClick()
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
