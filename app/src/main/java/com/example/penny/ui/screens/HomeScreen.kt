@@ -38,7 +38,11 @@ private val IncomeGreen = Color(0xFF4CAF82) //just for income
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
+fun HomeScreen(
+    viewModel: HomeViewModel = viewModel(),
+    totalBalance : Double = 0.0, // <- new, will come from state once ViewModel is wired
+    onProfileClick : () -> Unit = {} // <- new, wire to navigation later
+    ) {
     val state by viewModel.uiState.collectAsState()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val colors = MaterialTheme.colorScheme
@@ -50,7 +54,16 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
             .fillMaxSize()
             .background(colors.background)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+        ) {
+
+            TopBar(
+                totalBalance = totalBalance,
+                onProfileClick = onProfileClick
+            )
 
             MonthHeader(
                 year = state.displayedYear,
@@ -105,6 +118,51 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
         }
         if (showAddSheet) {
             AddTransactionSheet(onDismiss = { showAddSheet = false })
+        }
+    }
+}
+
+// ── Top bar: total balance + profile ──────────────────────────────────────────
+@Composable
+private fun TopBar(
+    totalBalance: Double,
+    onProfileClick: () -> Unit
+) {
+    val colors = MaterialTheme.colorScheme
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Total Balance",
+                color = colors.onSurfaceVariant,
+                style = MaterialTheme.typography.labelSmall
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = "KES %,.0f".format(totalBalance),
+                color = colors.onBackground,
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+            )
+        }
+
+        IconButton(onClick = onProfileClick) {
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(colors.primary),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "T", // placeholder initial, swap for user's initial or photo later
+                    color = colors.onPrimary,
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            }
         }
     }
 }
