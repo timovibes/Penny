@@ -42,4 +42,8 @@ class AuthRepository{
             return AuthResult.Error(e.message?: "Reset password link failed!")
         }
     }
+
+    fun signOut() {
+        auth.signOut()
+    }
 }

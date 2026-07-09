@@ -86,6 +86,12 @@ fun AppNavGraph(navController: NavHostController) {
             ProfileScreen(
                 onBackClick = { navController.popBackStack() },
                 state = viewModel.loadState(),
+                onLogoutClick = {
+                    viewModel.logout()
+                    navController.navigate("signin") {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             )
         }
 

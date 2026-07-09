@@ -20,9 +20,16 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import android.widget.Toast
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+
 
 // ── Data passed in — swap defaults for real data once wired to a ViewModel ────
 data class ProfileUiState(
@@ -60,6 +67,7 @@ fun ProfileScreen(
     val colors = MaterialTheme.colorScheme
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
+    var showLogoutDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -209,7 +217,7 @@ fun ProfileScreen(
                 label = "Log Out",
                 labelColor = colors.error,
                 iconTint = colors.error,
-                onClick = onLogoutClick
+                onClick = {showLogoutDialog = true}
             )
         }
 
@@ -221,6 +229,29 @@ fun ProfileScreen(
             style = MaterialTheme.typography.labelSmall,
             color = colors.onSurfaceVariant
         )
+
+        if (showLogoutDialog) {
+            AlertDialog(
+                onDismissRequest = { showLogoutDialog = false },
+                title = { Text("Log out?") },
+                text = { Text("Are you sure you want to log out?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showLogoutDialog = false
+                            onLogoutClick()
+                        }
+                    ) {
+                        Text("Log out", color = colors.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showLogoutDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
     }
 }
 
