@@ -62,7 +62,8 @@ fun HomeScreen(
 
             TopBar(
                 totalBalance = state.totalBalance,
-                onProfileClick = onProfileClick
+                onProfileClick = onProfileClick,
+                userInitial = state.userInitial
             )
 
             MonthHeader(
@@ -126,6 +127,7 @@ fun HomeScreen(
 @Composable
 private fun TopBar(
     totalBalance: Double,
+    userInitial : String,
     onProfileClick: () -> Unit
 ) {
     val colors = MaterialTheme.colorScheme
@@ -158,7 +160,7 @@ private fun TopBar(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "T", // placeholder initial, swap for user's initial or photo later
+                    text = userInitial, // placeholder initial, swap for user's initial or photo later
                     color = colors.onPrimary,
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
                 )

@@ -52,7 +52,7 @@ class SignUpViewModel : ViewModel() {
             _authState.value = AuthResult.Loading
 
             // Call the repository and get the result
-            val result = repository.signUp(_email.value, _password.value)
+            val result = repository.signUp(_name.value, _email.value, _password.value)
 
             // Update the state with whatever Firebase returned
             _authState.value = result

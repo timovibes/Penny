@@ -2,14 +2,21 @@ package com.example.penny.data.repository
 
 import com.example.penny.data.AuthResult
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.UserProfileChangeRequest
 import kotlinx.coroutines.tasks.await
 
 class AuthRepository{
     private val auth = FirebaseAuth.getInstance()
 
-    suspend fun signUp(email: String, password: String): AuthResult{
+    suspend fun signUp(name: String, email: String, password: String): AuthResult{
         try {
-            auth.createUserWithEmailAndPassword(email,password).await()
+            val result = auth.createUserWithEmailAndPassword(email, password).await()
+
+            val profileUpdates = UserProfileChangeRequest.Builder()
+                .setDisplayName(name)
+                .build()
+            result.user?.updateProfile(profileUpdates)?.await()
+
             return AuthResult.Success
 
         }catch(e: Exception){

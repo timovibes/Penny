@@ -25,6 +25,7 @@ data class HomeUiState(
     val monthlyIncome: Double = 0.0,
     val monthlyExpenses: Double = 0.0,
     val totalBalance: Double = 0.0,
+    val userInitial: String = "?",
     val isLoading: Boolean = true,
     val error: String? = null
 )
@@ -41,6 +42,7 @@ class HomeViewModel(
     init {
         observeCurrentMonth()
         observeTotalBalance()
+        loadUserInitial()
     }
 
     private fun observeTotalBalance() {
@@ -58,6 +60,14 @@ class HomeViewModel(
                     _uiState.update { it.copy(totalBalance = balance) }
                 }
         }
+    }
+
+    private fun loadUserInitial() {
+        val user = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+        val initial = user?.displayName?.trim()?.firstOrNull()?.uppercase()
+            ?: user?.email?.trim()?.firstOrNull()?.uppercase()
+            ?: "?"
+        _uiState.update { it.copy(userInitial = initial) }
     }
 
     fun goToPreviousMonth() {

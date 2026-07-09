@@ -13,6 +13,7 @@ import com.example.penny.ui.screens.SignInScreen
 import com.example.penny.ui.screens.SignUpScreen
 import com.example.penny.ui.screens.TermsOfServiceScreen
 import com.example.penny.viewmodel.HomeViewModel
+import com.example.penny.viewmodel.ProfileViewModel
 import com.example.penny.viewmodel.SignInViewModel
 import com.example.penny.viewmodel.SignUpViewModel
 
@@ -81,10 +82,10 @@ fun AppNavGraph(navController: NavHostController) {
         }
 
         composable("profile") {
+            val viewModel: ProfileViewModel = viewModel()
             ProfileScreen(
-                onBackClick = { navController.popBackStack() }
-                // other lambdas (onLogoutClick, onPersonalInfoClick, etc.) can stay
-                // as no-op defaults for now until you wire that logic in later
+                onBackClick = { navController.popBackStack() },
+                state = viewModel.loadState(),
             )
         }
 
