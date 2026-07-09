@@ -148,8 +148,6 @@ fun ProfileScreen(
         SectionCard {
             ProfileRow(Icons.Default.Person, "Personal Information", onClick = onPersonalInfoClick)
             RowDivider()
-            ProfileRow(Icons.Default.AccountBalance, "Bank Accounts", onClick = onBankAccountsClick)
-            RowDivider()
             ProfileRow(Icons.Default.Star, "Subscription Plan", trailingLabel = "PRO", onClick = onSubscriptionClick)
         }
 
@@ -164,40 +162,38 @@ fun ProfileScreen(
                 }
             )
             RowDivider()
-            ProfileRow(Icons.Default.Lock, "Change Password", onClick = onChangePasswordClick)
-            RowDivider()
             ProfileRow(
-                icon = Icons.Default.Shield,
-                label = "Two-Factor Authentication",
-                trailingLabel = if (state.twoFactorEnabled) "On" else "Off",
-                trailingLabelColor = if (state.twoFactorEnabled) Color(0xFF4CAF82) else colors.onSurfaceVariant,
-                onClick = onTwoFactorClick
+                Icons.Default.Lock, "Change Password",
+                onClick = onChangePasswordClick
             )
         }
 
-        // ── Preferences ──────────────────────────────────────────────────────
-        SectionLabel("PREFERENCES")
-        SectionCard {
-            ProfileRow(Icons.Default.Notifications, "Notifications", onClick = onNotificationsClick)
-            RowDivider()
-            ProfileRow(Icons.Default.Payments, "Currency (${state.currencyLabel})", onClick = onCurrencyClick)
-            RowDivider()
-            ProfileRow(
-                icon = Icons.Default.DarkMode,
-                label = "Dark Mode",
-                trailingContent = {
-                    Switch(checked = state.darkModeEnabled, onCheckedChange = onDarkModeToggle)
-                }
-            )
-        }
+//        // ── Preferences ──────────────────────────────────────────────────────
+//        SectionLabel("PREFERENCES")
+//        SectionCard {
+//            ProfileRow(Icons.Default.Notifications, "Notifications", onClick = onNotificationsClick)
+//            RowDivider()
+//            ProfileRow(Icons.Default.Payments, "Currency (${state.currencyLabel})", onClick = onCurrencyClick)
+//            RowDivider()
+//            ProfileRow(
+//                icon = Icons.Default.DarkMode,
+//                label = "Dark Mode",
+//                trailingContent = {
+//                    Switch(checked = state.darkModeEnabled, onCheckedChange = onDarkModeToggle)
+//                }
+//            )
+//        }
 
         // ── Support ──────────────────────────────────────────────────────────
         SectionLabel("SUPPORT")
         SectionCard {
+            ProfileRow(Icons.Default.Payments, "Currency (${state.currencyLabel})", onClick = onCurrencyClick)
+            RowDivider()
             ProfileRow(Icons.Default.HelpOutline, "Help Center", onClick = onHelpCenterClick)
             RowDivider()
             ProfileRow(Icons.Default.PrivacyTip, "Privacy Policy", onClick = onPrivacyPolicyClick)
             RowDivider()
+
             ProfileRow(
                 icon = Icons.AutoMirrored.Filled.Logout,
                 label = "Log Out",
