@@ -35,7 +35,11 @@ fun AppNavGraph(navController: NavHostController) {
                 onSignInClick = viewModel::signIn,
                 onForgotPasswordClick = viewModel::forgotPassword,
                 onSignUpClick = { navController.navigate("signup") },
-                onSignInSuccess = { navController.navigate("home") }
+                onSignInSuccess = {
+                    navController.navigate("home") {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             )
         }
 
@@ -55,7 +59,11 @@ fun AppNavGraph(navController: NavHostController) {
                 onLoginClick = { navController.navigate("signin") },
                 onTermsClick = { navController.navigate("terms") },
                 onPrivacyClick = { navController.navigate("privacy") },
-                onSignUpSuccess = { navController.navigate("home") }
+                onSignUpSuccess = {
+                    navController.navigate("home") {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             )
         }
 
