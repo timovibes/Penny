@@ -164,8 +164,6 @@ fun ProfileScreen(
         // ── Account ──────────────────────────────────────────────────────────
         SectionLabel("ACCOUNT")
         SectionCard {
-            ProfileRow(Icons.Default.Person, "Personal Information", onClick = onPersonalInfoClick)
-            RowDivider()
             ProfileRow(Icons.Default.Star, "Subscription Plan", trailingLabel = "PRO", onClick = onSubscriptionClick)
         }
 
