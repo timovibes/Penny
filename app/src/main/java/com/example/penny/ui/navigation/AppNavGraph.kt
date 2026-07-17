@@ -94,6 +94,7 @@ fun AppNavGraph(navController: NavHostController) {
             ProfileScreen(
                 onBackClick = { navController.popBackStack() },
                 state = viewModel.loadState(),
+                onPrivacyPolicyClick = { navController.navigate("privacy") },
                 onLogoutClick = {
                     viewModel.logout()
                     navController.navigate("signin") {
@@ -102,6 +103,7 @@ fun AppNavGraph(navController: NavHostController) {
                 }
             )
         }
+
 
     }
 }
