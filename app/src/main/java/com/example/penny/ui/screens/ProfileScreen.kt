@@ -219,12 +219,6 @@ fun ProfileScreen(
         }
 
         Spacer(Modifier.height(12.dp))
-        Text(
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            style = MaterialTheme.typography.labelSmall,
-            color = colors.onSurfaceVariant
-        )
 
         if (showLogoutDialog) {
             AlertDialog(
