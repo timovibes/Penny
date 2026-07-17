@@ -1,8 +1,11 @@
 package com.example.penny.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.penny.data.local.CurrencyPreferences
 import com.example.penny.data.model.Transaction
+import com.example.penny.data.repository.ExchangeRateRepository
 import com.example.penny.data.repository.TransactionRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
@@ -27,22 +30,49 @@ data class HomeUiState(
     val totalBalance: Double = 0.0,
     val userInitial: String = "?",
     val isLoading: Boolean = true,
-    val error: String? = null
+    val error: String? = null,
+    // ── Currency ──
+    val currencyCode: String = CurrencyPreferences.DEFAULT_CURRENCY,
+    val exchangeRates: Map<String, Double> = mapOf("KES" to 1.0),
+    val isRatesLoading: Boolean = false
 )
 
-class HomeViewModel(
+class HomeViewModel @JvmOverloads constructor(
+    application: Application,
     private val repository: TransactionRepository = TransactionRepository()
-) : ViewModel() {
+) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     private var monthObserverJob: Job? = null
 
+    private val currencyPreferences = CurrencyPreferences(application)
+    private val exchangeRateRepository = ExchangeRateRepository()
+
     init {
         observeCurrentMonth()
         observeTotalBalance()
         loadUserInitial()
+        observeCurrency()
+    }
+
+    // Watches the saved currency choice and re-fetches rates whenever it changes
+    private fun observeCurrency() {
+        viewModelScope.launch {
+            currencyPreferences.currencyCode.collect { code ->
+                _uiState.update { it.copy(currencyCode = code) }
+                refreshRates()
+            }
+        }
+    }
+
+    private fun refreshRates() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRatesLoading = true) }
+            val rates = exchangeRateRepository.getRates()
+            _uiState.update { it.copy(exchangeRates = rates, isRatesLoading = false) }
+        }
     }
 
     private fun observeTotalBalance() {
@@ -93,18 +123,13 @@ class HomeViewModel(
     }
 
     fun selectDay(date: LocalDate) {
-        // Tapping the same day again closes the sheet
         if (_uiState.value.selectedDate == date) {
             _uiState.update { it.copy(selectedDate = null, selectedDayTransactions = emptyList()) }
             return
         }
-        val dayTransactions = _uiState.value.daySummaries
-            .let { _ ->
-                // Filter from the already-loaded month transactions
-                _allMonthTransactions.filter { tx ->
-                    tx.date.toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate() == date
-                }
-            }
+        val dayTransactions = _allMonthTransactions.filter { tx ->
+            tx.date.toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate() == date
+        }
         _uiState.update { it.copy(selectedDate = date, selectedDayTransactions = dayTransactions) }
     }
 
@@ -112,7 +137,6 @@ class HomeViewModel(
         _uiState.update { it.copy(selectedDate = null, selectedDayTransactions = emptyList()) }
     }
 
-    // Held in memory so selectDay can filter without an extra Firestore call
     private var _allMonthTransactions: List<Transaction> = emptyList()
 
     private fun observeCurrentMonth() {
@@ -139,7 +163,6 @@ class HomeViewModel(
                             )
                         }
 
-                    // Refresh selected day transactions if a day is open
                     val selectedDate = _uiState.value.selectedDate
                     val updatedSelectedTx = if (selectedDate != null)
                         transactions.filter { tx ->

@@ -1,8 +1,5 @@
 package com.example.penny.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -23,9 +20,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.penny.data.model.Transaction
+import com.example.penny.util.CurrencyFormatter
 import com.example.penny.viewmodel.DaySummary
 import com.example.penny.viewmodel.HomeViewModel
 import java.time.LocalDate
@@ -33,16 +30,15 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 
 
-private val IncomeGreen = Color(0xFF4CAF82) //just for income
+private val IncomeGreen = Color(0xFF4CAF82)
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = viewModel(),
-//    totalBalance : Double = 0.0, // <- new, will come from state once ViewModel is wired
-    onProfileClick : () -> Unit = {} // <- new, wire to navigation later
-    ) {
+    onProfileClick: () -> Unit = {}
+) {
     val state by viewModel.uiState.collectAsState()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val colors = MaterialTheme.colorScheme
@@ -63,7 +59,9 @@ fun HomeScreen(
             TopBar(
                 totalBalance = state.totalBalance,
                 onProfileClick = onProfileClick,
-                userInitial = state.userInitial
+                userInitial = state.userInitial,
+                currencyCode = state.currencyCode,
+                exchangeRates = state.exchangeRates
             )
 
             MonthHeader(
@@ -71,6 +69,8 @@ fun HomeScreen(
                 month = state.displayedMonth,
                 monthlyIncome = state.monthlyIncome,
                 monthlyExpenses = state.monthlyExpenses,
+                currencyCode = state.currencyCode,
+                exchangeRates = state.exchangeRates,
                 onPrevious = viewModel::goToPreviousMonth,
                 onNext = viewModel::goToNextMonth
             )
@@ -112,7 +112,9 @@ fun HomeScreen(
             ) {
                 DayDetailSheet(
                     date = state.selectedDate!!,
-                    transactions = state.selectedDayTransactions
+                    transactions = state.selectedDayTransactions,
+                    currencyCode = state.currencyCode,
+                    exchangeRates = state.exchangeRates
                 )
 
             }
@@ -127,7 +129,9 @@ fun HomeScreen(
 @Composable
 private fun TopBar(
     totalBalance: Double,
-    userInitial : String,
+    userInitial: String,
+    currencyCode: String,
+    exchangeRates: Map<String, Double>,
     onProfileClick: () -> Unit
 ) {
     val colors = MaterialTheme.colorScheme
@@ -145,7 +149,7 @@ private fun TopBar(
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                text = "KES %,.0f".format(totalBalance),
+                text = CurrencyFormatter.format(totalBalance, currencyCode, exchangeRates),
                 color = colors.onBackground,
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
             )
@@ -160,7 +164,7 @@ private fun TopBar(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = userInitial, // placeholder initial, swap for user's initial or photo later
+                    text = userInitial,
                     color = colors.onPrimary,
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
                 )
@@ -176,6 +180,8 @@ private fun MonthHeader(
     month: Int,
     monthlyIncome: Double,
     monthlyExpenses: Double,
+    currencyCode: String,
+    exchangeRates: Map<String, Double>,
     onPrevious: () -> Unit,
     onNext: () -> Unit
 ) {
@@ -213,14 +219,21 @@ private fun MonthHeader(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            SummaryChip("Income", monthlyIncome, IncomeGreen, Modifier.weight(1f))
-            SummaryChip("Expenses", monthlyExpenses, colors.error, Modifier.weight(1f))
+            SummaryChip("Income", monthlyIncome, IncomeGreen, currencyCode, exchangeRates, Modifier.weight(1f))
+            SummaryChip("Expenses", monthlyExpenses, colors.error, currencyCode, exchangeRates, Modifier.weight(1f))
         }
     }
 }
 
 @Composable
-private fun SummaryChip(label: String, amount: Double, color: Color, modifier: Modifier) {
+private fun SummaryChip(
+    label: String,
+    amount: Double,
+    color: Color,
+    currencyCode: String,
+    exchangeRates: Map<String, Double>,
+    modifier: Modifier
+) {
     val colors = MaterialTheme.colorScheme
     Column(
         modifier = modifier
@@ -235,7 +248,7 @@ private fun SummaryChip(label: String, amount: Double, color: Color, modifier: M
         )
         Spacer(Modifier.height(2.dp))
         Text(
-            "KES %,.0f".format(amount),
+            CurrencyFormatter.format(amount, currencyCode, exchangeRates),
             color = color,
             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
         )
@@ -376,7 +389,12 @@ private fun Dot(color: Color) {
 
 // ── Day detail bottom sheet ───────────────────────────────────────────────────
 @Composable
-private fun DayDetailSheet(date: LocalDate, transactions: List<Transaction>) {
+private fun DayDetailSheet(
+    date: LocalDate,
+    transactions: List<Transaction>,
+    currencyCode: String,
+    exchangeRates: Map<String, Double>
+) {
     val fmt = DateTimeFormatter.ofPattern("EEEE, MMMM d")
     val income = transactions.filter { it.type == "income" }.sumOf { it.amount }
     val expenses = transactions.filter { it.type == "expense" }.sumOf { it.amount }
@@ -399,12 +417,12 @@ private fun DayDetailSheet(date: LocalDate, transactions: List<Transaction>) {
             Spacer(Modifier.height(6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 if (income > 0) Text(
-                    "+KES %,.0f".format(income),
+                    "+" + CurrencyFormatter.format(income, currencyCode, exchangeRates),
                     color = IncomeGreen,
                     style = MaterialTheme.typography.labelMedium
                 )
                 if (expenses > 0) Text(
-                    "−KES %,.0f".format(expenses),
+                    "\u2212" + CurrencyFormatter.format(expenses, currencyCode, exchangeRates),
                     color = colors.error,
                     style = MaterialTheme.typography.labelMedium
                 )
@@ -426,7 +444,7 @@ private fun DayDetailSheet(date: LocalDate, transactions: List<Transaction>) {
             }
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(transactions) { tx -> TransactionRow(tx) }
+                items(transactions) { tx -> TransactionRow(tx, currencyCode, exchangeRates) }
             }
         }
     }
@@ -434,7 +452,11 @@ private fun DayDetailSheet(date: LocalDate, transactions: List<Transaction>) {
 
 // ── Transaction row ───────────────────────────────────────────────────────────
 @Composable
-private fun TransactionRow(tx: Transaction) {
+private fun TransactionRow(
+    tx: Transaction,
+    currencyCode: String,
+    exchangeRates: Map<String, Double>
+) {
     val colors = MaterialTheme.colorScheme
     val isExpense = tx.type == "expense"
 
@@ -469,7 +491,7 @@ private fun TransactionRow(tx: Transaction) {
         )
 
         Text(
-            text = "${if (isExpense) "−" else "+"}KES %,.0f".format(tx.amount),
+            text = (if (isExpense) "\u2212" else "+") + CurrencyFormatter.format(tx.amount, currencyCode, exchangeRates),
             color = if (isExpense) colors.error else IncomeGreen,
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
         )

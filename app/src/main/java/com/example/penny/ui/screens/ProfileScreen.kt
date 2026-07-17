@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -29,6 +30,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import com.example.penny.util.CurrencyFormatter
 
 
 // ── Data passed in — swap defaults for real data once wired to a ViewModel ────
@@ -47,6 +49,7 @@ data class ProfileUiState(
 @Composable
 fun ProfileScreen(
     state: ProfileUiState = ProfileUiState(),
+    currentCurrency: String = state.currencyLabel, // <- live value from ProfileViewModel.currencyCode
     onBackClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onEditAvatarClick: () -> Unit = {},
@@ -57,7 +60,7 @@ fun ProfileScreen(
     onChangePasswordClick: () -> Unit = {},
     onTwoFactorClick: () -> Unit = {},
     onNotificationsClick: () -> Unit = {},
-    onCurrencyClick: () -> Unit = {},
+    onCurrencySelected: (String) -> Unit = {},
     onDarkModeToggle: (Boolean) -> Unit = {},
     onHelpCenterClick: () -> Unit = {},
     onPrivacyPolicyClick: () -> Unit = {},
@@ -67,6 +70,7 @@ fun ProfileScreen(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showCurrencyDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -80,7 +84,7 @@ fun ProfileScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 20.dp),   // <- more vertical space too
+                .padding(horizontal = 12.dp, vertical = 20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBackClick) {
@@ -93,7 +97,7 @@ fun ProfileScreen(
                 style = MaterialTheme.typography.titleMedium,
                 color = colors.onBackground
             )
-            Spacer(Modifier.width(48.dp))   // <- balances the back arrow's width so "Profile" stays centered
+            Spacer(Modifier.width(48.dp))
         }
 
         // ── Avatar + name + email + badge ───────────────────────────────────
@@ -111,7 +115,6 @@ fun ProfileScreen(
                         .background(colors.primary),
                     contentAlignment = Alignment.Center
                 ) {
-                    // Placeholder letter avatar — swap for AsyncImage(state.avatarUrl) via Coil later
                     Text(
                         text = state.name.firstOrNull()?.uppercase() ?: "?",
                         color = colors.onPrimary,
@@ -183,26 +186,14 @@ fun ProfileScreen(
             )
         }
 
-//        // ── Preferences ──────────────────────────────────────────────────────
-//        SectionLabel("PREFERENCES")
-//        SectionCard {
-//            ProfileRow(Icons.Default.Notifications, "Notifications", onClick = onNotificationsClick)
-//            RowDivider()
-//            ProfileRow(Icons.Default.Payments, "Currency (${state.currencyLabel})", onClick = onCurrencyClick)
-//            RowDivider()
-//            ProfileRow(
-//                icon = Icons.Default.DarkMode,
-//                label = "Dark Mode",
-//                trailingContent = {
-//                    Switch(checked = state.darkModeEnabled, onCheckedChange = onDarkModeToggle)
-//                }
-//            )
-//        }
-
         // ── Support ──────────────────────────────────────────────────────────
         SectionLabel("SUPPORT")
         SectionCard {
-            ProfileRow(Icons.Default.Payments, "Currency (${state.currencyLabel})", onClick = onCurrencyClick)
+            ProfileRow(
+                Icons.Default.Payments,
+                "Currency ($currentCurrency)",
+                onClick = { showCurrencyDialog = true }
+            )
             RowDivider()
             ProfileRow(Icons.Default.HelpOutline, "Help Center", onClick = onHelpCenterClick)
             RowDivider()
@@ -214,7 +205,7 @@ fun ProfileScreen(
                 label = "Log Out",
                 labelColor = colors.error,
                 iconTint = colors.error,
-                onClick = {showLogoutDialog = true}
+                onClick = { showLogoutDialog = true }
             )
         }
 
@@ -242,7 +233,57 @@ fun ProfileScreen(
                 }
             )
         }
+
+        if (showCurrencyDialog) {
+            CurrencyPickerDialog(
+                currentCurrency = currentCurrency,
+                onDismiss = { showCurrencyDialog = false },
+                onSelect = { code ->
+                    onCurrencySelected(code)
+                    showCurrencyDialog = false
+                }
+            )
+        }
     }
+}
+
+// ── Currency picker dialog ───────────────────────────────────────────────────
+@Composable
+private fun CurrencyPickerDialog(
+    currentCurrency: String,
+    onDismiss: () -> Unit,
+    onSelect: (String) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Choose currency") },
+        text = {
+            Column {
+                CurrencyFormatter.supportedCurrencies.forEach { code ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = code == currentCurrency,
+                                onClick = { onSelect(code) }
+                            )
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = code == currentCurrency,
+                            onClick = { onSelect(code) }
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(code)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Close") }
+        }
+    )
 }
 
 // ── Reusable pieces ─────────────────────────────────────────────────────────

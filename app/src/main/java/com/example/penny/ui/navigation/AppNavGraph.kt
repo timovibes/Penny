@@ -16,6 +16,7 @@ import com.example.penny.viewmodel.HomeViewModel
 import com.example.penny.viewmodel.ProfileViewModel
 import com.example.penny.viewmodel.SignInViewModel
 import com.example.penny.viewmodel.SignUpViewModel
+import androidx.compose.runtime.getValue
 
 @Composable
 fun AppNavGraph(navController: NavHostController) {
@@ -91,9 +92,13 @@ fun AppNavGraph(navController: NavHostController) {
 
         composable("profile") {
             val viewModel: ProfileViewModel = viewModel()
+            val currentCurrency by viewModel.currencyCode.collectAsState()
+
             ProfileScreen(
                 onBackClick = { navController.popBackStack() },
                 state = viewModel.loadState(),
+                currentCurrency = currentCurrency,
+                onCurrencySelected = viewModel::setCurrency,
                 onPrivacyPolicyClick = { navController.navigate("privacy") },
                 onLogoutClick = {
                     viewModel.logout()
