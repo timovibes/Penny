@@ -82,4 +82,5 @@ dependencies {
     androidTestImplementation("androidx.navigation:navigation-testing:$navVersion")
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
+
 }

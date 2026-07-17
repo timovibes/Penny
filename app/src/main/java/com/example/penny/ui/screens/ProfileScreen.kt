@@ -62,7 +62,6 @@ fun ProfileScreen(
     onHelpCenterClick: () -> Unit = {},
     onPrivacyPolicyClick: () -> Unit = {},
     onLogoutClick: () -> Unit = {},
-    versionLabel: String = "Version 2.4.1 (8291)"
 ) {
     val colors = MaterialTheme.colorScheme
     val context = LocalContext.current
@@ -221,7 +220,6 @@ fun ProfileScreen(
 
         Spacer(Modifier.height(12.dp))
         Text(
-            text = versionLabel,
             modifier = Modifier.fillMaxWidth(),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             style = MaterialTheme.typography.labelSmall,
