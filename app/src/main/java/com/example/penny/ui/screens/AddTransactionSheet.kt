@@ -67,7 +67,7 @@ fun AddTransactionSheet(
             OutlinedTextField(
                 value         = viewModel.amount,
                 onValueChange = { viewModel.amount = it },
-                label         = { Text("Amount (KES)") },
+                label = { Text("Amount (${viewModel.currencyCode})") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 singleLine    = true,
                 modifier      = Modifier.fillMaxWidth()
