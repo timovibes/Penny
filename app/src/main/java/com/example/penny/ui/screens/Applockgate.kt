@@ -33,7 +33,9 @@ fun AppLockGate(
 ) {
     val context = LocalContext.current
     val biometricPreferences = remember { BiometricPreferences(context) }
-    val biometricEnabled by biometricPreferences.isEnabled.collectAsState(initial = false)
+    // initial = true (not false): assume locked until DataStore tells us otherwise,
+    // so we never briefly reveal real content before the actual preference loads.
+    val biometricEnabled by biometricPreferences.isEnabled.collectAsState(initial = true)
 
     var isUnlocked by remember { mutableStateOf(true) }
 
