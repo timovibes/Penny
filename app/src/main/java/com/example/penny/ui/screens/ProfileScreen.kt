@@ -75,209 +75,210 @@ fun ProfileScreen(
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showCurrencyDialog by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(colors.background)
-            .verticalScroll(rememberScrollState())
-            .padding(bottom = 24.dp)
-            .statusBarsPadding()
-    ) {
-        // ── Top bar ──────────────────────────────────────────────────────────
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 20.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onBackClick) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = colors.onBackground)
-            }
-            Text(
-                text = "My Profile",
-                modifier = Modifier.weight(1f),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                style = MaterialTheme.typography.titleMedium,
-                color = colors.onBackground
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "My Profile",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = colors.onBackground
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = colors.onBackground)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.background)
             )
-            Spacer(Modifier.width(48.dp))
-        }
-
-        // ── Avatar + name + email + badge ───────────────────────────────────
+        },
+        containerColor = colors.background
+    ) { paddingValues ->
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp, bottom = 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .fillMaxSize()
+                .background(colors.background)
+                .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = 24.dp)
         ) {
-            Box(contentAlignment = Alignment.BottomEnd) {
-                Box(
-                    modifier = Modifier
-                        .size(84.dp)
-                        .clip(CircleShape)
-                        .background(colors.primary),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = state.name.firstOrNull()?.uppercase() ?: "?",
-                        color = colors.onPrimary,
-                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold)
-                    )
+            // ── Avatar + name + email + badge ───────────────────────────────────
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp, bottom = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(contentAlignment = Alignment.BottomEnd) {
+                    Box(
+                        modifier = Modifier
+                            .size(84.dp)
+                            .clip(CircleShape)
+                            .background(colors.primary),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = state.name.firstOrNull()?.uppercase() ?: "?",
+                            color = colors.onPrimary,
+                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold)
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(colors.onBackground)
+                            .clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                Toast.makeText(context, "Coming soon", Toast.LENGTH_LONG).show()
+                                onEditAvatarClick()
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Edit photo",
+                            tint = colors.background,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
                 }
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clip(CircleShape)
-                        .background(colors.onBackground)
-                        .clickable {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            Toast.makeText(context, "Coming soon", Toast.LENGTH_LONG).show()
-                            onEditAvatarClick()
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.Edit,
-                        contentDescription = "Edit photo",
-                        tint = colors.background,
-                        modifier = Modifier.size(14.dp)
-                    )
+
+                Spacer(Modifier.height(12.dp))
+                Text(state.name, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = colors.onBackground)
+                Text(state.email, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+
+                if (state.isProMember) {
+                    Spacer(Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(colors.primaryContainer)
+                            .padding(horizontal = 14.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            "Pro Member",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                            color = colors.onPrimaryContainer
+                        )
+                    }
                 }
+            }
+
+            // ── Account ──────────────────────────────────────────────────────────
+            SectionLabel("ACCOUNT")
+            SectionCard {
+                ProfileRow(Icons.Default.Star, "Subscription Plan", trailingLabel = "PRO", onClick = onSubscriptionClick)
+            }
+
+            // ── Security ─────────────────────────────────────────────────────────
+            SectionLabel("SECURITY")
+            SectionCard {
+                ProfileRow(
+                    icon = Icons.Default.Fingerprint,
+                    label = "Face ID / Biometrics",
+                    trailingContent = {
+                        Switch(
+                            checked = biometricEnabled,
+                            onCheckedChange = { checked ->
+                                if (!checked) {
+                                    // Turning off never needs a prompt
+                                    onFaceIdToggle(false)
+                                    return@Switch
+                                }
+                                if (!BiometricAuthHelper.isAvailable(context)) {
+                                    Toast.makeText(
+                                        context,
+                                        "No fingerprint set up on this device",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                    return@Switch
+                                }
+                                val activity = context as? FragmentActivity
+                                if (activity == null) {
+                                    Toast.makeText(context, "Couldn't open fingerprint setup", Toast.LENGTH_LONG).show()
+                                    return@Switch
+                                }
+                                BiometricAuthHelper.showPrompt(
+                                    activity = activity,
+                                    title = "Enable fingerprint lock",
+                                    subtitle = "Confirm your fingerprint to turn this on",
+                                    onSuccess = { onFaceIdToggle(true) },
+                                    onError = { /* stays off */ },
+                                    onFailed = { /* stays off */ }
+                                )
+                            }
+                        )
+                    }
+                )
+                RowDivider()
+                ProfileRow(
+                    Icons.Default.Lock, "Change Password",
+                    onClick = onChangePasswordClick
+                )
+            }
+
+            // ── Support ──────────────────────────────────────────────────────────
+            SectionLabel("SUPPORT")
+            SectionCard {
+                ProfileRow(
+                    Icons.Default.Payments,
+                    "Currency ($currentCurrency)",
+                    onClick = { showCurrencyDialog = true }
+                )
+                RowDivider()
+                ProfileRow(Icons.Default.HelpOutline, "Help Center", onClick = onHelpCenterClick)
+                RowDivider()
+                ProfileRow(Icons.Default.PrivacyTip, "Privacy Policy", onClick = onPrivacyPolicyClick)
+                RowDivider()
+
+                ProfileRow(
+                    icon = Icons.AutoMirrored.Filled.Logout,
+                    label = "Log Out",
+                    labelColor = colors.error,
+                    iconTint = colors.error,
+                    onClick = { showLogoutDialog = true }
+                )
             }
 
             Spacer(Modifier.height(12.dp))
-            Text(state.name, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = colors.onBackground)
-            Text(state.email, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
 
-            if (state.isProMember) {
-                Spacer(Modifier.height(8.dp))
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(colors.primaryContainer)
-                        .padding(horizontal = 14.dp, vertical = 6.dp)
-                ) {
-                    Text(
-                        "Pro Member",
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                        color = colors.onPrimaryContainer
-                    )
-                }
+            if (showLogoutDialog) {
+                AlertDialog(
+                    onDismissRequest = { showLogoutDialog = false },
+                    title = { Text("Log out?") },
+                    text = { Text("Are you sure you want to log out?") },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showLogoutDialog = false
+                                onLogoutClick()
+                            }
+                        ) {
+                            Text("Log out", color = colors.error)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showLogoutDialog = false }) {
+                            Text("Cancel")
+                        }
+                    }
+                )
             }
-        }
 
-        // ── Account ──────────────────────────────────────────────────────────
-        SectionLabel("ACCOUNT")
-        SectionCard {
-            ProfileRow(Icons.Default.Star, "Subscription Plan", trailingLabel = "PRO", onClick = onSubscriptionClick)
-        }
-
-        // ── Security ─────────────────────────────────────────────────────────
-        SectionLabel("SECURITY")
-        SectionCard {
-            ProfileRow(
-                icon = Icons.Default.Fingerprint,
-                label = "Face ID / Biometrics",
-                trailingContent = {
-                    Switch(
-                        checked = biometricEnabled,
-                        onCheckedChange = { checked ->
-                            if (!checked) {
-                                // Turning off never needs a prompt
-                                onFaceIdToggle(false)
-                                return@Switch
-                            }
-                            if (!BiometricAuthHelper.isAvailable(context)) {
-                                Toast.makeText(
-                                    context,
-                                    "No fingerprint set up on this device",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                                return@Switch
-                            }
-                            val activity = context as? FragmentActivity
-                            if (activity == null) {
-                                Toast.makeText(context, "Couldn't open fingerprint setup", Toast.LENGTH_LONG).show()
-                                return@Switch
-                            }
-                            BiometricAuthHelper.showPrompt(
-                                activity = activity,
-                                title = "Enable fingerprint lock",
-                                subtitle = "Confirm your fingerprint to turn this on",
-                                onSuccess = { onFaceIdToggle(true) },
-                                onError = { /* stays off */ },
-                                onFailed = { /* stays off */ }
-                            )
-                        }
-                    )
-                }
-            )
-            RowDivider()
-            ProfileRow(
-                Icons.Default.Lock, "Change Password",
-                onClick = onChangePasswordClick
-            )
-        }
-
-        // ── Support ──────────────────────────────────────────────────────────
-        SectionLabel("SUPPORT")
-        SectionCard {
-            ProfileRow(
-                Icons.Default.Payments,
-                "Currency ($currentCurrency)",
-                onClick = { showCurrencyDialog = true }
-            )
-            RowDivider()
-            ProfileRow(Icons.Default.HelpOutline, "Help Center", onClick = onHelpCenterClick)
-            RowDivider()
-            ProfileRow(Icons.Default.PrivacyTip, "Privacy Policy", onClick = onPrivacyPolicyClick)
-            RowDivider()
-
-            ProfileRow(
-                icon = Icons.AutoMirrored.Filled.Logout,
-                label = "Log Out",
-                labelColor = colors.error,
-                iconTint = colors.error,
-                onClick = { showLogoutDialog = true }
-            )
-        }
-
-        Spacer(Modifier.height(12.dp))
-
-        if (showLogoutDialog) {
-            AlertDialog(
-                onDismissRequest = { showLogoutDialog = false },
-                title = { Text("Log out?") },
-                text = { Text("Are you sure you want to log out?") },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            showLogoutDialog = false
-                            onLogoutClick()
-                        }
-                    ) {
-                        Text("Log out", color = colors.error)
+            if (showCurrencyDialog) {
+                CurrencyPickerDialog(
+                    currentCurrency = currentCurrency,
+                    onDismiss = { showCurrencyDialog = false },
+                    onSelect = { code ->
+                        onCurrencySelected(code)
+                        showCurrencyDialog = false
                     }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showLogoutDialog = false }) {
-                        Text("Cancel")
-                    }
-                }
-            )
-        }
-
-        if (showCurrencyDialog) {
-            CurrencyPickerDialog(
-                currentCurrency = currentCurrency,
-                onDismiss = { showCurrencyDialog = false },
-                onSelect = { code ->
-                    onCurrencySelected(code)
-                    showCurrencyDialog = false
-                }
-            )
-        }
-    }
+                )
+            }
+        } // closes Column
+    } // closes Scaffold content lambda
 }
 
 // ── Currency picker dialog ───────────────────────────────────────────────────
