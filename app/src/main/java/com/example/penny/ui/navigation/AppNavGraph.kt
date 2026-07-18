@@ -17,12 +17,15 @@ import com.example.penny.viewmodel.ProfileViewModel
 import com.example.penny.viewmodel.SignInViewModel
 import com.example.penny.viewmodel.SignUpViewModel
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun AppNavGraph(navController: NavHostController) {
+    val isLoggedIn = remember { FirebaseAuth.getInstance().currentUser != null }
     NavHost(
         navController = navController,
-        startDestination = "signin" // The first screen the user sees
+        startDestination = if (isLoggedIn) "home" else "signin"
     ) {
 
         composable("signin") {

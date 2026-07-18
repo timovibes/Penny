@@ -62,17 +62,22 @@ fun AppLockGate(
         }
     }
 
-    if (!biometricEnabled || isUnlocked) {
+    // content() stays composed at all times — this is what preserves navigation state
+    // (back stack, current screen) across lock/unlock cycles. The lock screen is drawn
+    // ON TOP of it as an overlay, not swapped in as a replacement.
+    Box(modifier = Modifier.fillMaxSize()) {
         content()
-    } else {
-        LockedScreen(
-            onRetry = {
-                BiometricAuthHelper.showPrompt(
-                    activity = activity,
-                    onSuccess = { isUnlocked = true }
-                )
-            }
-        )
+
+        if (biometricEnabled && !isUnlocked) {
+            LockedScreen(
+                onRetry = {
+                    BiometricAuthHelper.showPrompt(
+                        activity = activity,
+                        onSuccess = { isUnlocked = true }
+                    )
+                }
+            )
+        }
     }
 }
 
