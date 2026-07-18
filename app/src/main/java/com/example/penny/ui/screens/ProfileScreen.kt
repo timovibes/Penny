@@ -30,6 +30,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.fragment.app.FragmentActivity
+import com.example.penny.util.BiometricAuthHelper
 import com.example.penny.util.CurrencyFormatter
 
 
@@ -50,6 +52,7 @@ data class ProfileUiState(
 fun ProfileScreen(
     state: ProfileUiState = ProfileUiState(),
     currentCurrency: String = state.currencyLabel, // <- live value from ProfileViewModel.currencyCode
+    biometricEnabled: Boolean = state.faceIdEnabled, // <- live value from ProfileViewModel.biometricEnabled
     onBackClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onEditAvatarClick: () -> Unit = {},
@@ -176,7 +179,37 @@ fun ProfileScreen(
                 icon = Icons.Default.Fingerprint,
                 label = "Face ID / Biometrics",
                 trailingContent = {
-                    Switch(checked = state.faceIdEnabled, onCheckedChange = onFaceIdToggle)
+                    Switch(
+                        checked = biometricEnabled,
+                        onCheckedChange = { checked ->
+                            if (!checked) {
+                                // Turning off never needs a prompt
+                                onFaceIdToggle(false)
+                                return@Switch
+                            }
+                            if (!BiometricAuthHelper.isAvailable(context)) {
+                                Toast.makeText(
+                                    context,
+                                    "No fingerprint set up on this device",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                return@Switch
+                            }
+                            val activity = context as? FragmentActivity
+                            if (activity == null) {
+                                Toast.makeText(context, "Couldn't open fingerprint setup", Toast.LENGTH_LONG).show()
+                                return@Switch
+                            }
+                            BiometricAuthHelper.showPrompt(
+                                activity = activity,
+                                title = "Enable fingerprint lock",
+                                subtitle = "Confirm your fingerprint to turn this on",
+                                onSuccess = { onFaceIdToggle(true) },
+                                onError = { /* stays off */ },
+                                onFailed = { /* stays off */ }
+                            )
+                        }
+                    )
                 }
             )
             RowDivider()

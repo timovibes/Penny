@@ -93,12 +93,15 @@ fun AppNavGraph(navController: NavHostController) {
         composable("profile") {
             val viewModel: ProfileViewModel = viewModel()
             val currentCurrency by viewModel.currencyCode.collectAsState()
+            val biometricEnabled by viewModel.biometricEnabled.collectAsState()
 
             ProfileScreen(
                 onBackClick = { navController.popBackStack() },
                 state = viewModel.loadState(),
                 currentCurrency = currentCurrency,
                 onCurrencySelected = viewModel::setCurrency,
+                biometricEnabled = biometricEnabled,
+                onFaceIdToggle = viewModel::setBiometricEnabled,
                 onPrivacyPolicyClick = { navController.navigate("privacy") },
                 onLogoutClick = {
                     viewModel.logout()

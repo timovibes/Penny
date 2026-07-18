@@ -3,6 +3,7 @@ package com.example.penny.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.penny.data.local.BiometricPreferences
 import com.example.penny.data.local.CurrencyPreferences
 import com.example.penny.data.repository.AuthRepository
 import com.example.penny.ui.screens.ProfileUiState
@@ -17,16 +18,25 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     private val auth = FirebaseAuth.getInstance()
     private val repository = AuthRepository()
     private val currencyPreferences = CurrencyPreferences(application)
+    private val biometricPreferences = BiometricPreferences(application)
 
-    // Exposed separately (not baked into loadState()) so the UI updates live the
-    // moment the user picks a new currency — loadState() is a one-off snapshot.
+    // Exposed separately (not baked into loadState()) so the UI updates live —
+    // loadState() is a one-off snapshot, these two are reactive.
     private val _currencyCode = MutableStateFlow(CurrencyPreferences.DEFAULT_CURRENCY)
     val currencyCode: StateFlow<String> = _currencyCode.asStateFlow()
+
+    private val _biometricEnabled = MutableStateFlow(false)
+    val biometricEnabled: StateFlow<Boolean> = _biometricEnabled.asStateFlow()
 
     init {
         viewModelScope.launch {
             currencyPreferences.currencyCode.collect { code ->
                 _currencyCode.value = code
+            }
+        }
+        viewModelScope.launch {
+            biometricPreferences.isEnabled.collect { enabled ->
+                _biometricEnabled.value = enabled
             }
         }
     }
@@ -45,6 +55,14 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     fun setCurrency(code: String) {
         viewModelScope.launch {
             currencyPreferences.setCurrency(code)
+        }
+    }
+
+    // Called only after the fingerprint prompt has already succeeded (see ProfileScreen),
+    // or directly when turning the toggle off — no prompt needed to disable.
+    fun setBiometricEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            biometricPreferences.setEnabled(enabled)
         }
     }
 
