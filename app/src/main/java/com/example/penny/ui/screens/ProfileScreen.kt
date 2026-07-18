@@ -74,6 +74,7 @@ fun ProfileScreen(
     val haptic = LocalHapticFeedback.current
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showCurrencyDialog by remember { mutableStateOf(false) }
+    var showChangePasswordSheet by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -215,7 +216,7 @@ fun ProfileScreen(
                 RowDivider()
                 ProfileRow(
                     Icons.Default.Lock, "Change Password",
-                    onClick = onChangePasswordClick
+                    onClick = { showChangePasswordSheet = true }
                 )
             }
 
@@ -275,6 +276,11 @@ fun ProfileScreen(
                         onCurrencySelected(code)
                         showCurrencyDialog = false
                     }
+                )
+            }
+            if (showChangePasswordSheet) {
+                ChangePasswordSheet(
+                    onDismiss = { showChangePasswordSheet = false }
                 )
             }
         } // closes Column
