@@ -34,10 +34,12 @@ fun AppNavGraph(navController: NavHostController) {
                 email = viewModel.email.collectAsState().value,
                 password = viewModel.password.collectAsState().value,
                 authState = viewModel.authState.collectAsState().value,
+                resetState = viewModel.resetState.collectAsState().value,
                 onEmailChange = viewModel::onEmailChange,
                 onPasswordChange = viewModel::onPasswordChange,
                 onSignInClick = viewModel::signIn,
-                onForgotPasswordClick = viewModel::forgotPassword,
+                onForgotPasswordSubmit = viewModel::forgotPassword,
+                onClearResetState = viewModel::clearResetState,
                 onSignUpClick = { navController.navigate("signup") },
                 onSignInSuccess = {
                     navController.navigate("home") {

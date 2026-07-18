@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class SignInViewModel: ViewModel(){
+class SignInViewModel : ViewModel() {
     private val repository = AuthRepository()
 
     private val _email = MutableStateFlow("")
@@ -20,25 +20,29 @@ class SignInViewModel: ViewModel(){
     private val _authState = MutableStateFlow<AuthResult?>(null)
     val authState = _authState.asStateFlow()
 
+    // Separate from authState on purpose — a reset email succeeding must
+    // never be able to trigger the sign-in LaunchedEffect.
+    private val _resetState = MutableStateFlow<AuthResult?>(null)
+    val resetState = _resetState.asStateFlow()
+
     fun onEmailChange(value: String) { _email.value = value }
     fun onPasswordChange(value: String) { _password.value = value }
 
-    fun signIn(){
+    fun signIn() {
         viewModelScope.launch {
             _authState.value = AuthResult.Loading
-
-            val result = repository.signIn(_email.value, _password.value)
-
-            _authState.value = result
+            _authState.value = repository.signIn(_email.value, _password.value)
         }
     }
 
-    fun forgotPassword(){
+    fun forgotPassword(email: String) {
         viewModelScope.launch {
-            _authState.value = AuthResult.Loading
-
-            val result = repository.forgotPassword(_email.value)
-            _authState.value = result
+            _resetState.value = AuthResult.Loading
+            _resetState.value = repository.forgotPassword(email)
         }
+    }
+
+    fun clearResetState() {
+        _resetState.value = null
     }
 }

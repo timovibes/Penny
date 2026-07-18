@@ -34,7 +34,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.penny.data.AuthResult
 
 @Composable
@@ -43,22 +42,21 @@ fun SignInScreen(
     email: String,
     password: String,
     authState: AuthResult?,
+    resetState: AuthResult?,
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onSignInClick: () -> Unit,
-    onForgotPasswordClick: () -> Unit,
+    onForgotPasswordSubmit: (String) -> Unit,
+    onClearResetState: () -> Unit,
     onSignUpClick: () -> Unit,
     onSignInSuccess: () -> Unit
 ) {
-
-    // Controls whether the password is shown or hidden
     var passwordVisible by remember { mutableStateOf(false) }
-    // ──────────────────────────────────────────────────────────────────────────
+    var showForgotPasswordDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(authState) {
         when (authState) {
             is AuthResult.Success -> onSignInSuccess()
-            is AuthResult.Error -> { /* error message handled below */ }
             else -> Unit
         }
     }
@@ -71,8 +69,6 @@ fun SignInScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
-        // ─── HEADER ───────────────────────────────────────────────────────────
         Column(
             verticalArrangement = Arrangement.spacedBy(6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -91,10 +87,7 @@ fun SignInScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        // ──────────────────────────────────────────────────────────────────────
 
-
-        // ─── FORM CARD ────────────────────────────────────────────────────────
         Card(
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
             shape = RoundedCornerShape(16.dp),
@@ -104,14 +97,9 @@ fun SignInScreen(
                 modifier = Modifier.padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-
-                // ── EMAIL FIELD ──────────────────────────────────────────────
-                // VIEWMODEL HOOKUP:
-                //   value = uiState.email,
-                //   onValueChange = { onEmailChange(it) }
                 OutlinedTextField(
                     value = email,
-                    onValueChange = {onEmailChange(it) },
+                    onValueChange = { onEmailChange(it) },
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Email address") },
                     leadingIcon = {
@@ -129,13 +117,9 @@ fun SignInScreen(
                     shape = RoundedCornerShape(12.dp)
                 )
 
-                // ── PASSWORD FIELD ───────────────────────────────────────────
-                // VIEWMODEL HOOKUP:
-                //   value = uiState.password,
-                //   onValueChange = { onPasswordChange(it) }
                 OutlinedTextField(
                     value = password,
-                    onValueChange = {onPasswordChange(it)},
+                    onValueChange = { onPasswordChange(it) },
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Password") },
                     leadingIcon = {
@@ -171,8 +155,14 @@ fun SignInScreen(
                     shape = RoundedCornerShape(12.dp)
                 )
 
-                // ── FORGOT PASSWORD ──────────────────────────────────────────
-                // Aligned to the right, below the password field
+                if (authState is AuthResult.Error) {
+                    Text(
+                        text = authState.message,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
                 Text(
                     text = "Forgot password?",
                     style = MaterialTheme.typography.bodySmall,
@@ -180,15 +170,12 @@ fun SignInScreen(
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
                         .align(Alignment.End)
-                        .clickable {
-                            onForgotPasswordClick()
-                        }
+                        .clickable { showForgotPasswordDialog = true }
                 )
 
-                // ── SIGN IN BUTTON ───────────────────────────────────────────
-                // VIEWMODEL HOOKUP: onClick = { onSignInClick() }
                 Button(
-                    onClick = {onSignInClick()},
+                    onClick = { onSignInClick() },
+                    enabled = authState !is AuthResult.Loading,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
@@ -198,17 +185,21 @@ fun SignInScreen(
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
-                    Text(
-                        text = "Sign In",
-                        style = MaterialTheme.typography.labelLarge
-                    )
+                    if (authState is AuthResult.Loading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Text(
+                            text = "Sign In",
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
                 }
             }
         }
-        // ──────────────────────────────────────────────────────────────────────
 
-
-        // ─── SIGNUP REDIRECT ──────────────────────────────────────────────────
         Spacer(modifier = Modifier.height(20.dp))
         Row(
             horizontalArrangement = Arrangement.Center,
@@ -224,12 +215,20 @@ fun SignInScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.clickable {
-                    onSignUpClick()
-                }
+                modifier = Modifier.clickable { onSignUpClick() }
             )
         }
-        // ──────────────────────────────────────────────────────────────────────
+    }
 
+    if (showForgotPasswordDialog) {
+        ForgotPasswordDialog(
+            initialEmail = email,
+            resetState = resetState,
+            onSubmit = { onForgotPasswordSubmit(it) },
+            onDismiss = {
+                showForgotPasswordDialog = false
+                onClearResetState()
+            }
+        )
     }
 }
