@@ -16,6 +16,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
@@ -49,6 +51,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.penny.data.AuthResult
+import androidx.compose.ui.focus.onFocusChanged
 
 @Composable
 fun SignUpScreen(
@@ -71,6 +74,13 @@ fun SignUpScreen(
 
     var passwordVisible by remember { mutableStateOf(false) }
     var isChecked by remember { mutableStateOf(false) }
+    var passwordFieldFocused by remember { mutableStateOf(false) }
+
+    val hasMinLength = password.length >= 8
+    val hasUppercase = password.any { it.isUpperCase() }
+    val hasLowercase = password.any { it.isLowerCase() }
+    val hasDigit = password.any { it.isDigit() }
+    val hasSpecialChar = password.any { !it.isLetterOrDigit() }
 
     LaunchedEffect(authState) {
         when (authState) {
@@ -160,7 +170,11 @@ fun SignUpScreen(
                 OutlinedTextField(
                     value = password,
                     onValueChange = { onPasswordChange(it) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { focusState ->
+                            passwordFieldFocused = focusState.isFocused
+                        },
                     label = { Text("Password") },
                     leadingIcon = {
                         Icon(
@@ -194,6 +208,19 @@ fun SignUpScreen(
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp)
                 )
+
+                if (password.isNotEmpty() || passwordFieldFocused) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.padding(start = 4.dp, top = 2.dp)
+                    ) {
+                        PasswordRequirementRow("At least 8 characters", hasMinLength)
+                        PasswordRequirementRow("Contains an uppercase letter", hasUppercase)
+                        PasswordRequirementRow("Contains a lowercase letter", hasLowercase)
+                        PasswordRequirementRow("Contains a number", hasDigit)
+                        PasswordRequirementRow("Contains a special character", hasSpecialChar)
+                    }
+                }
 
                 if (authState is AuthResult.Error) {
                     Text(
@@ -283,5 +310,29 @@ fun SignUpScreen(
                 modifier = Modifier.clickable { onLoginClick() }
             )
         }
+    }
+}
+
+@Composable
+private fun PasswordRequirementRow(text: String, isMet: Boolean) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = if (isMet) Icons.Default.CheckCircle else Icons.Default.Cancel,
+            contentDescription = null,
+            tint = if (isMet)
+                MaterialTheme.colorScheme.primary
+            else
+                MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            color = if (isMet)
+                MaterialTheme.colorScheme.primary
+            else
+                MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
