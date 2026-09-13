@@ -16,15 +16,21 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.penny.data.model.Transaction
+import com.example.penny.ui.components.TutorialOverlay
+import com.example.penny.ui.components.TutorialStep
 import com.example.penny.util.CurrencyFormatter
 import com.example.penny.viewmodel.DaySummary
 import com.example.penny.viewmodel.HomeViewModel
+import com.example.penny.viewmodel.OnboardingViewModel
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -44,6 +50,13 @@ fun HomeScreen(
     val colors = MaterialTheme.colorScheme
     var showAddSheet by remember { mutableStateOf(false) }
 
+    // ── First-time tutorial state ──────────────────────────────────────────
+    val onboardingViewModel: OnboardingViewModel = viewModel()
+    val hasSeenOnboarding by onboardingViewModel.hasSeenOnboarding.collectAsState()
+    var tutorialStepIndex by remember { mutableStateOf(0) }
+    var fabBounds by remember { mutableStateOf<Rect?>(null) }
+    var profileButtonBounds by remember { mutableStateOf<Rect?>(null) }
+
 
     Box(
         modifier = Modifier
@@ -61,7 +74,10 @@ fun HomeScreen(
                 onProfileClick = onProfileClick,
                 userInitial = state.userInitial,
                 currencyCode = state.currencyCode,
-                exchangeRates = state.exchangeRates
+                exchangeRates = state.exchangeRates,
+                profileButtonModifier = Modifier.onGloballyPositioned {
+                    profileButtonBounds = it.boundsInRoot()
+                }
             )
 
             MonthHeader(
@@ -96,7 +112,8 @@ fun HomeScreen(
             onClick = { showAddSheet = true },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(24.dp),
+                .padding(24.dp)
+                .onGloballyPositioned { fabBounds = it.boundsInRoot() },
             containerColor = colors.primary,
             contentColor = colors.onPrimary
         ) {
@@ -122,6 +139,39 @@ fun HomeScreen(
         if (showAddSheet) {
             AddTransactionSheet(onDismiss = { showAddSheet = false })
         }
+
+        // ── First-time spotlight tutorial ────────────────────────────────
+        if (hasSeenOnboarding == false) {
+            val tutorialSteps = listOf(
+                TutorialStep(
+                    targetBounds = fabBounds,
+                    title = "Add your first transaction ",
+                    description = "Tap here to log a transaction. For the best experience, start with an income entry for the money you already have, then log your expenses as you spend.",
+                    tooltipAlignment = Alignment.BottomCenter,
+                    tooltipPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 100.dp)
+                ),
+                TutorialStep(
+                    targetBounds = profileButtonBounds,
+                    title = "Your profile",
+                    description = "Check and edit your profile info, currency, and security settings from here.",
+                    tooltipAlignment = Alignment.TopCenter,
+                    tooltipPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 90.dp)
+                )
+            )
+
+            TutorialOverlay(
+                steps = tutorialSteps,
+                currentStepIndex = tutorialStepIndex,
+                onNext = {
+                    if (tutorialStepIndex < tutorialSteps.lastIndex) {
+                        tutorialStepIndex++
+                    } else {
+                        onboardingViewModel.markOnboardingComplete()
+                    }
+                },
+                onSkip = { onboardingViewModel.markOnboardingComplete() }
+            )
+        }
     }
 }
 
@@ -132,7 +182,8 @@ private fun TopBar(
     userInitial: String,
     currencyCode: String,
     exchangeRates: Map<String, Double>,
-    onProfileClick: () -> Unit
+    onProfileClick: () -> Unit,
+    profileButtonModifier: Modifier = Modifier
 ) {
     val colors = MaterialTheme.colorScheme
     Row(
@@ -155,7 +206,10 @@ private fun TopBar(
             )
         }
 
-        IconButton(onClick = onProfileClick) {
+        IconButton(
+            onClick = onProfileClick,
+            modifier = profileButtonModifier
+        ) {
             Box(
                 modifier = Modifier
                     .size(34.dp)
