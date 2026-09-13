@@ -74,6 +74,7 @@ class AddTransactionViewModel @JvmOverloads constructor(
             saveError = null
             try {
                 repository.addTransaction(transaction)
+                resetForm()
                 onSuccess()
             } catch (e: Exception) {
                 saveError = e.message
@@ -81,5 +82,13 @@ class AddTransactionViewModel @JvmOverloads constructor(
                 isSaving = false
             }
         }
+    }
+
+    fun resetForm() {
+        amount   = ""
+        type     = "expense"
+        category = ""
+        note     = ""
+        date     = LocalDate.now()
     }
 }
