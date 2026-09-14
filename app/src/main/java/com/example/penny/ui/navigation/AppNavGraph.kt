@@ -99,6 +99,8 @@ fun AppNavGraph(navController: NavHostController) {
             val viewModel: ProfileViewModel = viewModel()
             val currentCurrency by viewModel.currencyCode.collectAsState()
             val biometricEnabled by viewModel.biometricEnabled.collectAsState()
+            val avatarBase64 by viewModel.avatarBase64.collectAsState()
+            val isUploadingAvatar by viewModel.isUploadingAvatar.collectAsState()
 
             ProfileScreen(
                 onBackClick = { navController.popBackStack() },
@@ -107,6 +109,9 @@ fun AppNavGraph(navController: NavHostController) {
                 onCurrencySelected = viewModel::setCurrency,
                 biometricEnabled = biometricEnabled,
                 onFaceIdToggle = viewModel::setBiometricEnabled,
+                avatarBase64 = avatarBase64,
+                isUploadingAvatar = isUploadingAvatar,
+                onAvatarSelected = viewModel::uploadProfilePicture,
                 onPrivacyPolicyClick = { navController.navigate("privacy") },
                 onLogoutClick = {
                     viewModel.logout()

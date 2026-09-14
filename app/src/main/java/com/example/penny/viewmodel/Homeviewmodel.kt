@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.penny.data.local.CurrencyPreferences
 import com.example.penny.data.model.Transaction
+import com.example.penny.data.repository.AuthRepository
 import com.example.penny.data.repository.ExchangeRateRepository
 import com.example.penny.data.repository.TransactionRepository
 import kotlinx.coroutines.Job
@@ -29,6 +30,7 @@ data class HomeUiState(
     val monthlyExpenses: Double = 0.0,
     val totalBalance: Double = 0.0,
     val userInitial: String = "?",
+    val avatarBase64: String? = null,
     val isLoading: Boolean = true,
     val error: String? = null,
     // ── Currency ──
@@ -49,11 +51,12 @@ class HomeViewModel @JvmOverloads constructor(
 
     private val currencyPreferences = CurrencyPreferences(application)
     private val exchangeRateRepository = ExchangeRateRepository()
+    private val authRepository = AuthRepository()
 
     init {
         observeCurrentMonth()
         observeTotalBalance()
-        loadUserInitial()
+        refreshUserInfo()
         observeCurrency()
     }
 
@@ -92,12 +95,21 @@ class HomeViewModel @JvmOverloads constructor(
         }
     }
 
-    private fun loadUserInitial() {
+    // Re-reads the current user's initial + profile picture. Called on init, and
+    // again from HomeScreen whenever it comes back into view — since this
+    // ViewModel survives navigating to Profile and back, it won't otherwise
+    // notice if the avatar changed while the user was on that screen.
+    fun refreshUserInfo() {
         val user = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
         val initial = user?.displayName?.trim()?.firstOrNull()?.uppercase()
             ?: user?.email?.trim()?.firstOrNull()?.uppercase()
             ?: "?"
         _uiState.update { it.copy(userInitial = initial) }
+
+        viewModelScope.launch {
+            val base64 = authRepository.getProfilePictureBase64()
+            _uiState.update { it.copy(avatarBase64 = base64) }
+        }
     }
 
     fun goToPreviousMonth() {

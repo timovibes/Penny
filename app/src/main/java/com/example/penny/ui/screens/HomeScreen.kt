@@ -34,6 +34,9 @@ import com.example.penny.viewmodel.OnboardingViewModel
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
+import com.example.penny.util.rememberAvatarBitmap
 
 
 private val IncomeGreen = Color(0xFF4CAF82)
@@ -46,6 +49,11 @@ fun HomeScreen(
     onProfileClick: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.refreshUserInfo()
+    }
+
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val colors = MaterialTheme.colorScheme
     var showAddSheet by remember { mutableStateOf(false) }
@@ -73,6 +81,7 @@ fun HomeScreen(
                 totalBalance = state.totalBalance,
                 onProfileClick = onProfileClick,
                 userInitial = state.userInitial,
+                avatarBase64 = state.avatarBase64,
                 currencyCode = state.currencyCode,
                 exchangeRates = state.exchangeRates,
                 profileButtonModifier = Modifier.onGloballyPositioned {
@@ -145,7 +154,7 @@ fun HomeScreen(
             val tutorialSteps = listOf(
                 TutorialStep(
                     targetBounds = fabBounds,
-                    title = "Add your first transaction ",
+                    title = "Add your first transaction",
                     description = "Tap here to log a transaction. For the best experience, start with an income entry for the money you already have, then log your expenses as you spend.",
                     tooltipAlignment = Alignment.BottomCenter,
                     tooltipPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 100.dp)
@@ -180,12 +189,15 @@ fun HomeScreen(
 private fun TopBar(
     totalBalance: Double,
     userInitial: String,
+    avatarBase64: String?,
     currencyCode: String,
     exchangeRates: Map<String, Double>,
     onProfileClick: () -> Unit,
     profileButtonModifier: Modifier = Modifier
 ) {
     val colors = MaterialTheme.colorScheme
+    val avatarBitmap = rememberAvatarBitmap(avatarBase64)
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -217,11 +229,22 @@ private fun TopBar(
                     .background(colors.primary),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = userInitial,
-                    color = colors.onPrimary,
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
-                )
+                if (avatarBitmap != null) {
+                    Image(
+                        bitmap = avatarBitmap,
+                        contentDescription = "Profile picture",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Text(
+                        text = userInitial,
+                        color = colors.onPrimary,
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
             }
         }
     }

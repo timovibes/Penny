@@ -1,5 +1,9 @@
 package com.example.penny.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import android.widget.Toast
@@ -33,13 +38,14 @@ import androidx.compose.runtime.setValue
 import androidx.fragment.app.FragmentActivity
 import com.example.penny.util.BiometricAuthHelper
 import com.example.penny.util.CurrencyFormatter
+import com.example.penny.util.rememberAvatarBitmap
 
 
 // ── Data passed in — swap defaults for real data once wired to a ViewModel ────
 data class ProfileUiState(
     val name: String = "Alex Johnson",
     val email: String = "alex.j@example.com",
-    val avatarUrl: String? = null,          // null for now, plug a real URL + Coil later
+    val avatarUrl: String? = null,          // legacy field, unused now — avatarBase64 param carries the real image
     val isProMember: Boolean = true,
     val faceIdEnabled: Boolean = true,
     val twoFactorEnabled: Boolean = true,
@@ -53,9 +59,12 @@ fun ProfileScreen(
     state: ProfileUiState = ProfileUiState(),
     currentCurrency: String = state.currencyLabel, // <- live value from ProfileViewModel.currencyCode
     biometricEnabled: Boolean = state.faceIdEnabled, // <- live value from ProfileViewModel.biometricEnabled
+    avatarBase64: String? = null, // <- live value from ProfileViewModel.avatarBase64
+    isUploadingAvatar: Boolean = false,   // <- live value from ProfileViewModel.isUploadingAvatar
     onBackClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onEditAvatarClick: () -> Unit = {},
+    onAvatarSelected: (android.net.Uri) -> Unit = {},
     onPersonalInfoClick: () -> Unit = {},
     onBankAccountsClick: () -> Unit = {},
     onSubscriptionClick: () -> Unit = {},
@@ -75,6 +84,13 @@ fun ProfileScreen(
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showCurrencyDialog by remember { mutableStateOf(false) }
     var showChangePasswordSheet by remember { mutableStateOf(false) }
+    val avatarBitmap = rememberAvatarBitmap(avatarBase64)
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let { onAvatarSelected(it) }
+    }
 
     Scaffold(
         topBar = {
@@ -119,11 +135,38 @@ fun ProfileScreen(
                             .background(colors.primary),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = state.name.firstOrNull()?.uppercase() ?: "?",
-                            color = colors.onPrimary,
-                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold)
-                        )
+                        if (avatarBitmap != null) {
+                            Image(
+                                bitmap = avatarBitmap,
+                                contentDescription = "Profile picture",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Text(
+                                text = state.name.firstOrNull()?.uppercase() ?: "?",
+                                color = colors.onPrimary,
+                                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold)
+                            )
+                        }
+
+                        if (isUploadingAvatar) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape)
+                                    .background(Color.Black.copy(alpha = 0.45f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(28.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
+                                )
+                            }
+                        }
                     }
                     Box(
                         modifier = Modifier
@@ -132,7 +175,9 @@ fun ProfileScreen(
                             .background(colors.onBackground)
                             .clickable {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                Toast.makeText(context, "Coming soon", Toast.LENGTH_LONG).show()
+                                photoPickerLauncher.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
                                 onEditAvatarClick()
                             },
                         contentAlignment = Alignment.Center
@@ -203,8 +248,6 @@ fun ProfileScreen(
                                 }
                                 BiometricAuthHelper.showPrompt(
                                     activity = activity,
-                                    title = "Enable fingerprint lock",
-                                    subtitle = "Confirm your fingerprint to turn this on",
                                     onSuccess = { onFaceIdToggle(true) },
                                     onError = { /* stays off */ },
                                     onFailed = { /* stays off */ }
