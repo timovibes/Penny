@@ -6,6 +6,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.example.penny.ui.screens.AnalyticsScreen
+import com.example.penny.viewmodel.AnalyticsViewModel
 import com.example.penny.ui.screens.HomeScreen
 import com.example.penny.ui.screens.PrivacyPolicyScreen
 import com.example.penny.ui.screens.ProfileScreen
@@ -92,6 +94,14 @@ fun AppNavGraph(navController: NavHostController) {
                 onProfileClick = {
                     navController.navigate("profile")
                 }
+            )
+        }
+
+        composable("analytics") {
+            val viewModel: AnalyticsViewModel = viewModel()
+            AnalyticsScreen(
+                onBackClick = { navController.popBackStack() },
+                viewModel = viewModel
             )
         }
 
