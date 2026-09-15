@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -46,7 +47,8 @@ private val IncomeGreen = Color(0xFF4CAF82)
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = viewModel(),
-    onProfileClick: () -> Unit = {}
+    onProfileClick: () -> Unit = {},
+    onAnalyticsClick: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -80,6 +82,7 @@ fun HomeScreen(
             TopBar(
                 totalBalance = state.totalBalance,
                 onProfileClick = onProfileClick,
+                onAnalyticsClick = onAnalyticsClick,
                 userInitial = state.userInitial,
                 avatarBase64 = state.avatarBase64,
                 currencyCode = state.currencyCode,
@@ -193,6 +196,7 @@ private fun TopBar(
     currencyCode: String,
     exchangeRates: Map<String, Double>,
     onProfileClick: () -> Unit,
+    onAnalyticsClick: () -> Unit,
     profileButtonModifier: Modifier = Modifier
 ) {
     val colors = MaterialTheme.colorScheme
@@ -215,6 +219,14 @@ private fun TopBar(
                 text = CurrencyFormatter.format(totalBalance, currencyCode, exchangeRates),
                 color = colors.onBackground,
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+            )
+        }
+
+        IconButton(onClick = onAnalyticsClick) {
+            Icon(
+                Icons.Default.PieChart,
+                contentDescription = "Spending analytics",
+                tint = colors.onSurfaceVariant
             )
         }
 
