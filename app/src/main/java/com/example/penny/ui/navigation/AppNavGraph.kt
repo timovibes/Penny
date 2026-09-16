@@ -93,6 +93,9 @@ fun AppNavGraph(navController: NavHostController) {
                 viewModel = viewModel,
                 onProfileClick = {
                     navController.navigate("profile")
+                },
+                onAnalyticsClick = {
+                    navController.navigate("analytics")
                 }
             )
         }
