@@ -38,6 +38,7 @@ import java.time.format.DateTimeFormatter
 import androidx.compose.foundation.Image
 import androidx.compose.ui.layout.ContentScale
 import com.example.penny.util.rememberAvatarBitmap
+import androidx.compose.material.icons.filled.Whatshot
 
 
 private val IncomeGreen = Color(0xFF4CAF82)
@@ -59,6 +60,7 @@ fun HomeScreen(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val colors = MaterialTheme.colorScheme
     var showAddSheet by remember { mutableStateOf(false) }
+    var heatmapEnabled by remember { mutableStateOf(false) }
 
     // ── First-time tutorial state ──────────────────────────────────────────
     val onboardingViewModel: OnboardingViewModel = viewModel()
@@ -100,7 +102,9 @@ fun HomeScreen(
                 currencyCode = state.currencyCode,
                 exchangeRates = state.exchangeRates,
                 onPrevious = viewModel::goToPreviousMonth,
-                onNext = viewModel::goToNextMonth
+                onNext = viewModel::goToNextMonth,
+                heatmapEnabled = heatmapEnabled,
+                onToggleHeatmap = { heatmapEnabled = !heatmapEnabled }
             )
 
             WeekdayRow()
@@ -115,7 +119,8 @@ fun HomeScreen(
                     month = state.displayedMonth,
                     daySummaries = state.daySummaries,
                     selectedDate = state.selectedDate,
-                    onDayClick = viewModel::selectDay
+                    onDayClick = viewModel::selectDay,
+                    heatmapEnabled = heatmapEnabled
                 )
             }
         }
@@ -272,7 +277,9 @@ private fun MonthHeader(
     currencyCode: String,
     exchangeRates: Map<String, Double>,
     onPrevious: () -> Unit,
-    onNext: () -> Unit
+    onNext: () -> Unit,
+    heatmapEnabled: Boolean,
+    onToggleHeatmap: () -> Unit
 ) {
     val label = YearMonth.of(year, month)
         .format(DateTimeFormatter.ofPattern("MMMM yyyy"))
@@ -299,6 +306,13 @@ private fun MonthHeader(
             )
             IconButton(onClick = onNext) {
                 Icon(Icons.Default.ChevronRight, contentDescription = "Next", tint = colors.onSurfaceVariant)
+            }
+            IconButton(onClick = onToggleHeatmap) {
+                Icon(
+                    Icons.Default.Whatshot,
+                    contentDescription = "Toggle spend heatmap",
+                    tint = if (heatmapEnabled) colors.error else colors.onSurfaceVariant
+                )
             }
         }
 
@@ -372,13 +386,20 @@ private fun CalendarGrid(
     month: Int,
     daySummaries: Map<LocalDate, DaySummary>,
     selectedDate: LocalDate?,
-    onDayClick: (LocalDate) -> Unit
+    onDayClick: (LocalDate) -> Unit,
+    heatmapEnabled: Boolean
 ) {
     val today = LocalDate.now()
     val firstDay = LocalDate.of(year, month, 1)
     val startOffset = firstDay.dayOfWeek.value % 7
     val daysInMonth = YearMonth.of(year, month).lengthOfMonth()
     val rows = (startOffset + daysInMonth + 6) / 7
+
+    // Highest single-day expense this month — the "100% intensity" anchor,
+    // same idea as a GitHub contribution graph scaling off its busiest day
+    val maxDailyExpense = remember(daySummaries) {
+        daySummaries.values.maxOfOrNull { it.totalExpenses }?.takeIf { it > 0.0 } ?: 0.0
+    }
 
     Column(
         modifier = Modifier
@@ -393,13 +414,20 @@ private fun CalendarGrid(
                         Box(modifier = Modifier.weight(1f).aspectRatio(0.85f))
                     } else {
                         val date = LocalDate.of(year, month, dayNum)
+                        val summary = daySummaries[date]
+                        val intensity = if (maxDailyExpense > 0.0 && summary != null)
+                            (summary.totalExpenses / maxDailyExpense).toFloat().coerceIn(0f, 1f)
+                        else 0f
+
                         DayCell(
                             day = dayNum,
                             date = date,
-                            summary = daySummaries[date],
+                            summary = summary,
                             isToday = date == today,
                             isSelected = date == selectedDate,
                             onClick = { onDayClick(date) },
+                            heatmapEnabled = heatmapEnabled,
+                            intensity = intensity,
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -419,14 +447,19 @@ private fun DayCell(
     isToday: Boolean,
     isSelected: Boolean,
     onClick: () -> Unit,
+    heatmapEnabled: Boolean,
+    intensity: Float,
     modifier: Modifier = Modifier
 ) {
     val colors = MaterialTheme.colorScheme
+    val heatBackground = if (heatmapEnabled) heatColorForIntensity(intensity, colors.error) else Color.Transparent
+
     Box(
         modifier = modifier
             .aspectRatio(0.85f)
             .padding(2.dp)
             .clip(RoundedCornerShape(10.dp))
+            .background(heatBackground)
             .background(if (isSelected) colors.surfaceContainerHigh else Color.Transparent)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
@@ -451,19 +484,39 @@ private fun DayCell(
             }
 
             Spacer(Modifier.height(3.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                if (summary != null && summary.totalIncome > 0) {
-                    Dot(IncomeGreen)
+
+            if (heatmapEnabled) {
+                // Background already encodes spend intensity — dots would be redundant
+                Spacer(Modifier.height(5.dp))
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    if (summary != null && summary.totalIncome > 0) {
+                        Dot(IncomeGreen)
+                    }
+                    if (summary != null && summary.totalExpenses > 0) {
+                        Dot(colors.error)
+                    }
                 }
-                if (summary != null && summary.totalExpenses > 0) {
-                    Dot(colors.error)
+                if (summary == null || (summary.totalIncome == 0.0 && summary.totalExpenses == 0.0)) {
+                    Spacer(Modifier.height(7.dp))
                 }
-            }
-            if (summary == null || (summary.totalIncome == 0.0 && summary.totalExpenses == 0.0)) {
-                Spacer(Modifier.height(7.dp))
             }
         }
     }
+}
+
+// Five-band intensity scale (like GitHub's contribution graph) rather than a
+// continuous gradient — five bands are visually distinguishable at a glance,
+// a continuous ramp would just look noisy at day-cell size
+private fun heatColorForIntensity(intensity: Float, baseColor: Color): Color {
+    val alpha = when {
+        intensity <= 0f -> 0f
+        intensity < 0.25f -> 0.15f
+        intensity < 0.5f -> 0.35f
+        intensity < 0.75f -> 0.6f
+        else -> 0.9f
+    }
+    return baseColor.copy(alpha = alpha)
 }
 
 @Composable
