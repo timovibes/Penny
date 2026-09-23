@@ -36,8 +36,16 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.fragment.app.FragmentActivity
+import android.Manifest
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import android.content.pm.PackageManager
 import com.example.penny.util.BiometricAuthHelper
 import com.example.penny.util.CurrencyFormatter
+import com.example.penny.util.NotificationAccessHelper
 import com.example.penny.util.rememberAvatarBitmap
 
 
@@ -85,6 +93,33 @@ fun ProfileScreen(
     var showCurrencyDialog by remember { mutableStateOf(false) }
     var showChangePasswordSheet by remember { mutableStateOf(false) }
     val avatarBitmap = rememberAvatarBitmap(avatarBase64)
+
+    // ── Auto-detect transactions: SMS + notification access status ────────
+    var smsPermissionGranted by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+    var notificationAccessEnabled by remember { mutableStateOf(NotificationAccessHelper.isEnabled(context)) }
+
+    val smsPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        smsPermissionGranted = results[Manifest.permission.RECEIVE_SMS] == true
+    }
+
+    // Notification access is granted on a separate system Settings screen, not a dialog,
+    // so re-check status when the user comes back to this screen rather than in a callback
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                notificationAccessEnabled = NotificationAccessHelper.isEnabled(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -260,6 +295,42 @@ fun ProfileScreen(
                 ProfileRow(
                     Icons.Default.Lock, "Change Password",
                     onClick = { showChangePasswordSheet = true }
+                )
+            }
+
+            // ── Auto-detect transactions ────────────────────────────────────────
+            SectionLabel("AUTO-DETECT TRANSACTIONS")
+            SectionCard {
+                ProfileRow(
+                    icon = Icons.Default.Sms,
+                    label = "Read M-Pesa / Bank SMS",
+                    trailingContent = {
+                        Switch(
+                            checked = smsPermissionGranted,
+                            onCheckedChange = { checked ->
+                                if (checked) {
+                                    smsPermissionLauncher.launch(
+                                        arrayOf(Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS)
+                                    )
+                                } else {
+                                    // Android has no API to revoke a permission from within the app —
+                                    // send the user to the app's own permission settings instead
+                                    Toast.makeText(
+                                        context,
+                                        "To turn this off, disable SMS permission in system Settings",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            }
+                        )
+                    }
+                )
+                RowDivider()
+                ProfileRow(
+                    icon = Icons.Default.NotificationsActive,
+                    label = "Read Payment Notifications",
+                    trailingLabel = if (notificationAccessEnabled) "On" else "Off",
+                    onClick = { NotificationAccessHelper.openSettings(context) }
                 )
             }
 
