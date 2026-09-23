@@ -32,6 +32,7 @@ import com.example.penny.util.CurrencyFormatter
 import com.example.penny.viewmodel.DaySummary
 import com.example.penny.viewmodel.HomeViewModel
 import com.example.penny.viewmodel.OnboardingViewModel
+import com.example.penny.viewmodel.ReviewInboxViewModel
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -39,6 +40,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.ui.layout.ContentScale
 import com.example.penny.util.rememberAvatarBitmap
 import androidx.compose.material.icons.filled.Whatshot
+import androidx.compose.material.icons.filled.Inbox
 
 
 private val IncomeGreen = Color(0xFF4CAF82)
@@ -49,9 +51,12 @@ private val IncomeGreen = Color(0xFF4CAF82)
 fun HomeScreen(
     viewModel: HomeViewModel = viewModel(),
     onProfileClick: () -> Unit = {},
-    onAnalyticsClick: () -> Unit = {}
+    onAnalyticsClick: () -> Unit = {},
+    onReviewInboxClick: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsState()
+    val reviewInboxViewModel: ReviewInboxViewModel = viewModel()
+    val reviewInboxState by reviewInboxViewModel.uiState.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.refreshUserInfo()
@@ -85,6 +90,8 @@ fun HomeScreen(
                 totalBalance = state.totalBalance,
                 onProfileClick = onProfileClick,
                 onAnalyticsClick = onAnalyticsClick,
+                onReviewInboxClick = onReviewInboxClick,
+                pendingReviewCount = reviewInboxState.pending.size,
                 userInitial = state.userInitial,
                 avatarBase64 = state.avatarBase64,
                 currencyCode = state.currencyCode,
@@ -202,6 +209,8 @@ private fun TopBar(
     exchangeRates: Map<String, Double>,
     onProfileClick: () -> Unit,
     onAnalyticsClick: () -> Unit,
+    onReviewInboxClick: () -> Unit = {},
+    pendingReviewCount: Int = 0,
     profileButtonModifier: Modifier = Modifier
 ) {
     val colors = MaterialTheme.colorScheme
@@ -233,6 +242,22 @@ private fun TopBar(
                 contentDescription = "Spending analytics",
                 tint = colors.onSurfaceVariant
             )
+        }
+
+        BadgedBox(
+            badge = {
+                if (pendingReviewCount > 0) {
+                    Badge { Text(pendingReviewCount.toString()) }
+                }
+            }
+        ) {
+            IconButton(onClick = onReviewInboxClick) {
+                Icon(
+                    Icons.Default.Inbox,
+                    contentDescription = "Auto-detected transactions to review",
+                    tint = colors.onSurfaceVariant
+                )
+            }
         }
 
         IconButton(
