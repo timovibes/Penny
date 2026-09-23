@@ -18,6 +18,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.penny.data.model.PendingTransaction
 import com.example.penny.util.CurrencyFormatter
 import com.example.penny.viewmodel.ReviewInboxViewModel
+import androidx.compose.foundation.background
 
 private val BUDGET_CATEGORIES = listOf("Food", "Transport", "Rent", "Utilities", "Health", "Shopping", "Entertainment", "Airtime", "Other", "Uncategorized")
 
@@ -104,7 +105,7 @@ private fun PendingTransactionCard(
         ) {
             Column {
                 Text(
-                    text = CurrencyFormatter.format(item.amount, item.currency),
+                    text = CurrencyFormatter.format(item.amount, item.currency, mapOf("KES" to 1.0)),
                     fontWeight = FontWeight.Bold,
                     color = if (item.type == "income") Color(0xFF4CAF82) else colors.onSurface
                 )
