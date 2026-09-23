@@ -11,11 +11,13 @@ import com.example.penny.viewmodel.AnalyticsViewModel
 import com.example.penny.ui.screens.HomeScreen
 import com.example.penny.ui.screens.PrivacyPolicyScreen
 import com.example.penny.ui.screens.ProfileScreen
+import com.example.penny.ui.screens.ReviewInboxScreen
 import com.example.penny.ui.screens.SignInScreen
 import com.example.penny.ui.screens.SignUpScreen
 import com.example.penny.ui.screens.TermsOfServiceScreen
 import com.example.penny.viewmodel.HomeViewModel
 import com.example.penny.viewmodel.ProfileViewModel
+import com.example.penny.viewmodel.ReviewInboxViewModel
 import com.example.penny.viewmodel.SignInViewModel
 import com.example.penny.viewmodel.SignUpViewModel
 import androidx.compose.runtime.getValue
@@ -96,7 +98,18 @@ fun AppNavGraph(navController: NavHostController) {
                 },
                 onAnalyticsClick = {
                     navController.navigate("analytics")
+                },
+                onReviewInboxClick = {
+                    navController.navigate("review_inbox")
                 }
+            )
+        }
+
+        composable("review_inbox") {
+            val viewModel: ReviewInboxViewModel = viewModel()
+            ReviewInboxScreen(
+                onBackClick = { navController.popBackStack() },
+                viewModel = viewModel
             )
         }
 
