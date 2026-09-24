@@ -37,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.fragment.app.FragmentActivity
 import android.Manifest
+import android.os.Build
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.core.content.ContextCompat
@@ -101,12 +102,25 @@ fun ProfileScreen(
         )
     }
     var notificationAccessEnabled by remember { mutableStateOf(NotificationAccessHelper.isEnabled(context)) }
+    var postNotificationsGranted by remember {
+        mutableStateOf(
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        )
+    }
 
     val smsPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
         smsPermissionGranted = results[Manifest.permission.RECEIVE_SMS] == true
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            postNotificationsGranted = results[Manifest.permission.POST_NOTIFICATIONS] ?: postNotificationsGranted
+        }
     }
+
+    val notifPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted -> postNotificationsGranted = granted }
 
     // Notification access is granted on a separate system Settings screen, not a dialog,
     // so re-check status when the user comes back to this screen rather than in a callback
@@ -115,6 +129,11 @@ fun ProfileScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 notificationAccessEnabled = NotificationAccessHelper.isEnabled(context)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    postNotificationsGranted = ContextCompat.checkSelfPermission(
+                        context, Manifest.permission.POST_NOTIFICATIONS
+                    ) == PackageManager.PERMISSION_GRANTED
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -309,9 +328,11 @@ fun ProfileScreen(
                             checked = smsPermissionGranted,
                             onCheckedChange = { checked ->
                                 if (checked) {
-                                    smsPermissionLauncher.launch(
-                                        arrayOf(Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS)
-                                    )
+                                    val perms = mutableListOf(Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS)
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        perms.add(Manifest.permission.POST_NOTIFICATIONS)
+                                    }
+                                    smsPermissionLauncher.launch(perms.toTypedArray())
                                 } else {
                                     // Android has no API to revoke a permission from within the app —
                                     // send the user to the app's own permission settings instead
@@ -330,7 +351,12 @@ fun ProfileScreen(
                     icon = Icons.Default.NotificationsActive,
                     label = "Read Payment Notifications",
                     trailingLabel = if (notificationAccessEnabled) "On" else "Off",
-                    onClick = { NotificationAccessHelper.openSettings(context) }
+                    onClick = {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !postNotificationsGranted) {
+                            notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                        NotificationAccessHelper.openSettings(context)
+                    }
                 )
             }
 
