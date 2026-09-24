@@ -2,6 +2,7 @@ package com.example.penny.util
 
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import android.util.Log
 import com.example.penny.data.repository.PendingTransactionRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,13 +37,20 @@ class PennyNotificationListenerService : NotificationListenerService() {
         val body = "$title $text".trim()
         if (body.isBlank()) return
 
-        val pending = TransactionTextParser.parse(body, sourceLabel = sbn.packageName, source = "notification") ?: return
+        val pending = TransactionTextParser.parse(body, sourceLabel = sbn.packageName, source = "notification")
+        if (pending == null) {
+            Log.w("PennyNotifListener", "${sbn.packageName} notification matched allowlist but parser found no transaction. Body: $body")
+            return
+        }
 
+        val appContext = applicationContext
         serviceScope.launch {
             try {
                 repository.addPending(pending)
-            } catch (_: Exception) {
-                // Silently drop on failure — no user-facing surface from a background service
+                Log.d("PennyNotifListener", "Staged pending transaction: ${pending.amount} ${pending.type} from ${sbn.packageName}")
+                PendingTransactionNotifier.notify(appContext, pending)
+            } catch (e: Exception) {
+                Log.e("PennyNotifListener", "Failed to save pending transaction from ${sbn.packageName}", e)
             }
         }
     }
