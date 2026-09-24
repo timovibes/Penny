@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 
 data class ReviewInboxUiState(
     val pending: List<PendingTransaction> = emptyList(),
+    val history: List<PendingTransaction> = emptyList(), // confirmed + dismissed, newest first
     val isLoading: Boolean = true,
     val error: String? = null
 )
@@ -29,14 +30,19 @@ class ReviewInboxViewModel @JvmOverloads constructor(
 
     init {
         viewModelScope.launch {
-            pendingRepository.observePending().collect { pending ->
-                _uiState.value = _uiState.value.copy(pending = pending, isLoading = false)
+            pendingRepository.observeAll().collect { all ->
+                _uiState.value = _uiState.value.copy(
+                    pending = all.filter { it.status == "pending" },
+                    history = all.filter { it.status != "pending" },
+                    isLoading = false
+                )
             }
         }
     }
 
     // Confirms a pending item, optionally with user-edited amount/category/note,
-    // writes it to the real ledger, then removes it from the staging collection.
+    // writes it to the real ledger, then marks the staged item "confirmed"
+    // (kept, not deleted, so it shows up in History).
     fun confirm(
         item: PendingTransaction,
         amount: Double = item.amount,
@@ -55,7 +61,7 @@ class ReviewInboxViewModel @JvmOverloads constructor(
                         currency = item.currency
                     )
                 )
-                pendingRepository.deletePending(item.id)
+                pendingRepository.updateStatus(item.id, "confirmed")
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.message)
             }
@@ -65,7 +71,7 @@ class ReviewInboxViewModel @JvmOverloads constructor(
     fun dismiss(item: PendingTransaction) {
         viewModelScope.launch {
             try {
-                pendingRepository.deletePending(item.id)
+                pendingRepository.updateStatus(item.id, "dismissed")
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.message)
             }
