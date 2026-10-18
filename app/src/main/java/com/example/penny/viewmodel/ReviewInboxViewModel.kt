@@ -11,12 +11,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeoutOrNull
 
 data class ReviewInboxUiState(
     val pending: List<PendingTransaction> = emptyList(),
     val history: List<PendingTransaction> = emptyList(), // confirmed + dismissed, newest first
     val isLoading: Boolean = true,
-    val error: String? = null
+    val error: String? = null,
+    val message: String? = null // one-shot info message shown as a snackbar
 )
 
 class ReviewInboxViewModel @JvmOverloads constructor(
@@ -27,6 +30,9 @@ class ReviewInboxViewModel @JvmOverloads constructor(
 
     private val _uiState = MutableStateFlow(ReviewInboxUiState())
     val uiState: StateFlow<ReviewInboxUiState> = _uiState.asStateFlow()
+
+    // Ids currently being confirmed — stops repeated taps from creating duplicate transactions
+    private val inFlight = mutableSetOf<String>()
 
     init {
         viewModelScope.launch {
@@ -49,9 +55,10 @@ class ReviewInboxViewModel @JvmOverloads constructor(
         category: String = item.category,
         note: String = item.note
     ) {
+        if (item.status != "pending" || !inFlight.add(item.id)) return
         viewModelScope.launch {
             try {
-                transactionRepository.addTransaction(
+                val addTask = transactionRepository.addTransactionQueued(
                     Transaction(
                         amount = amount,
                         type = item.type,
@@ -61,8 +68,22 @@ class ReviewInboxViewModel @JvmOverloads constructor(
                         currency = item.currency
                     )
                 )
-                pendingRepository.updateStatus(item.id, "confirmed")
+                val statusTask = pendingRepository.updateStatusQueued(item.id, "confirmed")
+
+                // Online, the server acknowledges almost instantly. Offline it never
+                // does, so after 1.5s we tell the user it's saved locally.
+                val synced = withTimeoutOrNull(1500) {
+                    addTask.await()
+                    statusTask.await()
+                    true
+                } ?: false
+
+                _uiState.value = _uiState.value.copy(
+                    message = if (synced) "Transaction added"
+                    else "Saved on this device. It will sync when you're back online."
+                )
             } catch (e: Exception) {
+                inFlight.remove(item.id)
                 _uiState.value = _uiState.value.copy(error = e.message)
             }
         }
@@ -76,5 +97,9 @@ class ReviewInboxViewModel @JvmOverloads constructor(
                 _uiState.value = _uiState.value.copy(error = e.message)
             }
         }
+    }
+
+    fun messageShown() {
+        _uiState.value = _uiState.value.copy(message = null)
     }
 }
