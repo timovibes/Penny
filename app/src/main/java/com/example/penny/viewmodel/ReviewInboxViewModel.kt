@@ -99,6 +99,38 @@ class ReviewInboxViewModel @JvmOverloads constructor(
         }
     }
 
+    // Removes every item currently in the Pending tab. Nothing is added to the ledger.
+    fun clearPending() = clearItems(_uiState.value.pending)
+
+    // Removes every record in the History tab. Transactions already written to the
+    // ledger are untouched — only the review records go.
+    fun clearHistory() = clearItems(_uiState.value.history)
+
+    private fun clearItems(items: List<PendingTransaction>) {
+        if (items.isEmpty()) return
+        viewModelScope.launch {
+            try {
+                val count = items.size
+                val label = if (count == 1) "1 item" else "$count items"
+                val task = pendingRepository.deleteManyQueued(items.map { it.id })
+
+                // Same pattern as confirm(): the local list updates instantly, and if the
+                // server doesn't acknowledge within 1.5s we say it will sync later.
+                val synced = withTimeoutOrNull(1500) {
+                    task.await()
+                    true
+                } ?: false
+
+                _uiState.value = _uiState.value.copy(
+                    message = if (synced) "Cleared $label"
+                    else "Cleared $label on this device. It will sync when you're back online."
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = e.message)
+            }
+        }
+    }
+
     fun messageShown() {
         _uiState.value = _uiState.value.copy(message = null)
     }
