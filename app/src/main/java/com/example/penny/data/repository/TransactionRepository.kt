@@ -1,7 +1,9 @@
 package com.example.penny.data.repository
 
+import com.google.android.gms.tasks.Task
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FirebaseFirestore
 import com.example.penny.data.model.Transaction
 import kotlinx.coroutines.channels.awaitClose
@@ -26,6 +28,12 @@ class TransactionRepository {
             .add(transaction)
             .await()
     }
+
+    // Queues the write locally and returns the Task immediately. Firestore applies it
+    // to the local cache right away and syncs when online, so callers can choose how
+    // long to wait for the server instead of suspending forever while offline.
+    fun addTransactionQueued(transaction: Transaction): Task<DocumentReference> =
+        transactionsCollection().add(transaction)
 
     suspend fun getTransactionsForMonth(year: Int, month: Int): List<Transaction> {
         val startCalendar = Calendar.getInstance().apply {
