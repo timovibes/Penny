@@ -14,5 +14,6 @@ data class PendingTransaction(
     val sourceLabel: String = "", // e.g. sender "MPESA" or app package name
     val rawText: String = "", // original SMS/notification body, kept for user review
     val confidence: String = "high", // "high" or "low" — low confidence surfaces a warning in the review UI
-    val status: String = "pending" // "pending", "confirmed", or "dismissed" — kept (not deleted) so History can show past items
+    val status: String = "pending", // "pending", "confirmed", or "dismissed" — kept (not deleted) so History can show past items
+    val balance: Double? = null // account balance quoted in the message itself, if it had one
 )
