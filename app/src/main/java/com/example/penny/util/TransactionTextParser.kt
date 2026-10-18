@@ -13,6 +13,14 @@ object TransactionTextParser {
 
     private val amountRegex = Regex("""(?:Ksh|KES|KSH)\s?([\d,]+\.?\d{0,2})""", RegexOption.IGNORE_CASE)
 
+    // Account balance quoted in the message, e.g. "New M-PESA balance is Ksh1,234.56"
+    // or "Available balance: KES 8,450.25". Requires "bal"/"balance" directly before the
+    // currency so "Transaction cost" and "Amount you can transact" figures aren't picked up.
+    private val balanceRegex = Regex(
+        """bal(?:ance)?\s*(?:is|:|-)?\s*(?:Ksh|KES)\.?\s?([\d,]+(?:\.\d{1,2})?)""",
+        RegexOption.IGNORE_CASE
+    )
+
     // Each pattern: keyword trigger -> (type, category, note extractor)
     private val received = Regex("""you have received\s+(?:Ksh|KES)\s?[\d,]+\.?\d{0,2}\s+from\s+([A-Za-z0-9 .'-]+?)\s+\d""", RegexOption.IGNORE_CASE)
     private val sentTo = Regex("""sent to\s+([A-Za-z0-9 .'-]+?)\s+\d""", RegexOption.IGNORE_CASE)
@@ -56,6 +64,13 @@ object TransactionTextParser {
         return null
     }
 
+    // Returns the balance quoted in the text, or null if the message doesn't include one
+    private fun extractBalance(rawText: String): Double? =
+        balanceRegex.find(rawText)
+            ?.groupValues?.get(1)
+            ?.replace(",", "")
+            ?.toDoubleOrNull()
+
     private fun build(
         amount: Double,
         type: String,
@@ -75,6 +90,7 @@ object TransactionTextParser {
         source = source,
         sourceLabel = sourceLabel,
         rawText = rawText,
-        confidence = confidence
+        confidence = confidence,
+        balance = extractBalance(rawText)
     )
 }
