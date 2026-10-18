@@ -36,8 +36,17 @@ fun ReviewInboxScreen(
     var editingItem by remember { mutableStateOf<PendingTransaction?>(null) }
     var selectedTab by remember { mutableStateOf(0) } // 0 = Pending, 1 = History
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(state.message) {
+        state.message?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.messageShown()
+        }
+    }
+
     Scaffold(
         containerColor = colors.background,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Review Transactions") },
