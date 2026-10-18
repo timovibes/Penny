@@ -44,6 +44,9 @@ fun ReviewInboxScreen(
         }
     }
 
+    var showClearDialog by remember { mutableStateOf(false) }
+    val currentList = if (selectedTab == 0) state.pending else state.history
+
     Scaffold(
         containerColor = colors.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -53,6 +56,13 @@ fun ReviewInboxScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    if (currentList.isNotEmpty()) {
+                        TextButton(onClick = { showClearDialog = true }) {
+                            Text("Clear all", color = colors.error)
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.background)
@@ -112,6 +122,32 @@ fun ReviewInboxScreen(
             onSave = { amount, category, note ->
                 viewModel.confirm(item, amount = amount, category = category, note = note)
                 editingItem = null
+            }
+        )
+    }
+
+    if (showClearDialog) {
+        val isPendingTab = selectedTab == 0
+        val count = currentList.size
+        AlertDialog(
+            onDismissRequest = { showClearDialog = false },
+            title = { Text(if (isPendingTab) "Clear all pending?" else "Clear history?") },
+            text = {
+                Text(
+                    if (isPendingTab)
+                        "Remove all $count pending ${if (count == 1) "item" else "items"}? They won't be added to your transactions."
+                    else
+                        "Remove all $count history ${if (count == 1) "record" else "records"}? Transactions already added to your ledger are not affected."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (isPendingTab) viewModel.clearPending() else viewModel.clearHistory()
+                    showClearDialog = false
+                }) { Text("Clear", color = colors.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearDialog = false }) { Text("Cancel") }
             }
         )
     }
