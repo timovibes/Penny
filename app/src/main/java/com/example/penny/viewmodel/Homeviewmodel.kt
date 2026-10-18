@@ -7,6 +7,7 @@ import com.example.penny.data.local.CurrencyPreferences
 import com.example.penny.data.model.Transaction
 import com.example.penny.data.repository.AuthRepository
 import com.example.penny.data.repository.ExchangeRateRepository
+import com.example.penny.data.repository.PendingTransactionRepository
 import com.example.penny.data.repository.TransactionRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
@@ -52,10 +53,17 @@ class HomeViewModel @JvmOverloads constructor(
     private val currencyPreferences = CurrencyPreferences(application)
     private val exchangeRateRepository = ExchangeRateRepository()
     private val authRepository = AuthRepository()
+    private val pendingRepository = PendingTransactionRepository()
+
+    // Two sources for the total balance: the real balance quoted in the latest confirmed
+    // SMS/notification, and the old income-minus-expenses sum. The real one wins when present.
+    private var statementBalance: Double? = null
+    private var computedBalance: Double = 0.0
 
     init {
         observeCurrentMonth()
         observeTotalBalance()
+        observeStatementBalance()
         refreshUserInfo()
         observeCurrency()
     }
@@ -78,19 +86,40 @@ class HomeViewModel @JvmOverloads constructor(
         }
     }
 
+    private fun publishBalance() {
+        _uiState.update { it.copy(totalBalance = statementBalance ?: computedBalance) }
+    }
+
     private fun observeTotalBalance() {
         viewModelScope.launch {
             repository.observeAllTransactions()
                 .catch { /* keep last known balance on error; don't crash UI */ }
                 .collect { transactions ->
-                    val balance = transactions
+                    computedBalance = transactions
                         .filter { it.type == "income" }
                         .sumOf { it.amount } -
                             transactions
                                 .filter { it.type == "expense" }
                                 .sumOf { it.amount }
 
-                    _uiState.update { it.copy(totalBalance = balance) }
+                    publishBalance()
+                }
+        }
+    }
+
+    // Reads the balance quoted in the most recent confirmed SMS/notification, so the
+    // total matches what M-Pesa / the bank actually reports instead of being derived.
+    private fun observeStatementBalance() {
+        viewModelScope.launch {
+            pendingRepository.observeAll()
+                .catch { /* keep last known balance on error; don't crash UI */ }
+                .collect { items ->
+                    statementBalance = items
+                        .filter { it.status == "confirmed" && it.balance != null }
+                        .maxByOrNull { it.date.toDate().time }
+                        ?.balance
+
+                    publishBalance()
                 }
         }
     }
