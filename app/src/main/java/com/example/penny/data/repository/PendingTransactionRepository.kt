@@ -1,6 +1,7 @@
 package com.example.penny.data.repository
 
 import com.example.penny.data.model.PendingTransaction
+import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -56,6 +57,13 @@ class PendingTransactionRepository {
             .update("status", status)
             .await()
     }
+
+    // Queues the status change locally and returns the Task immediately, so the
+    // item moves out of Pending right away even while offline.
+    fun updateStatusQueued(pendingId: String, status: String): Task<Void> =
+        pendingCollection()
+            .document(pendingId)
+            .update("status", status)
 
     suspend fun deletePending(pendingId: String) {
         pendingCollection()
