@@ -2,6 +2,7 @@ package com.example.penny.data.repository
 
 import com.example.penny.data.model.PendingTransaction
 import com.google.android.gms.tasks.Task
+import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -70,5 +71,18 @@ class PendingTransactionRepository {
             .document(pendingId)
             .delete()
             .await()
+    }
+
+    // Deletes many staged items at once. Firestore batches hold at most 500 writes,
+    // so large lists are split. Queued like the other *Queued writes: applied to the
+    // local cache immediately, synced when online.
+    fun deleteManyQueued(pendingIds: List<String>): Task<Void> {
+        val collection = pendingCollection()
+        val commits = pendingIds.chunked(500).map { chunk ->
+            val batch = firestore.batch()
+            chunk.forEach { id -> batch.delete(collection.document(id)) }
+            batch.commit()
+        }
+        return Tasks.whenAll(commits)
     }
 }
